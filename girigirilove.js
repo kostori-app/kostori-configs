@@ -3,7 +3,7 @@ class Girigirilove extends AnimeSource{
 
     key = "girigirilove"
 
-    version = "1.0.1"
+    version = "1.0.2"
 
     minAppVersion = "1.0.0"
 
@@ -117,13 +117,27 @@ class Girigirilove extends AnimeSource{
             let cover = `${this.baseUrl}${imageUrl}`
             let episodeElements = document.querySelectorAll('.anthology-list-play li a')
             let ep = new Map()
+            let ep2 = new Map()
             for (let e of episodeElements) {
-                let link = e.attributes['href']?.trim() ?? ''
-                let title = e.text.trim() ?? ''
+                let link = e.attributes['href']?.trim() ?? '';
+                let title = e.text.trim() ?? '';
+
                 if (title.length === 0) {
-                    title = `第${ep.size + 1}話`
+                    title = `第${ep.size + 1}話`;
                 }
-                ep.set(link, title)
+
+                // Extracting the number after the first dash in the link
+                const splitLink = link.split("-");
+                if (splitLink.length >= 2) {
+                    const episodeNumber = parseInt(splitLink[1]);
+
+                    // Checking if the episode number after the first dash is 1 or 2
+                    if (episodeNumber === 1) {
+                        ep.set(link, title);
+                    } else if (episodeNumber === 2) {
+                        ep2.set(link, title);
+                    }
+                }
             }
             if (ep.size === 0) {
                 ep.set('#', '第1話')
