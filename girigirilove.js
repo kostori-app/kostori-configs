@@ -3,7 +3,7 @@ class Girigirilove extends AnimeSource{
 
     key = "girigirilove"
 
-    version = "1.0.2"
+    version = "1.0.3"
 
     minAppVersion = "1.0.0"
 
@@ -134,8 +134,10 @@ class Girigirilove extends AnimeSource{
                     // Checking if the episode number after the first dash is 1 or 2
                     if (episodeNumber === 1) {
                         ep.set(link, title);
+
                     } else if (episodeNumber === 2) {
                         ep2.set(link, title);
+
                     }
                 }
             }
@@ -155,7 +157,9 @@ class Girigirilove extends AnimeSource{
                     "类型": tags,
                 },
                 episode: ep,
+                episode2: ep2,
                 recommend: animes,
+                url: this.baseUrl + id,
             })
         },
 
