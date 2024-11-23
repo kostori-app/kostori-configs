@@ -3,7 +3,7 @@ class Girigirilove extends AnimeSource{
 
     key = "girigirilove"
 
-    version = "1.0.3"
+    version = "1.0.4"
 
     minAppVersion = "1.0.0"
 
@@ -35,10 +35,10 @@ class Girigirilove extends AnimeSource{
         return new Anime({
             id: id,
             title: name,
-            subtitle: subName,
+            subtitle: subName ?? '',
             cover: cover,
-            tags: categoryList,
-            description: info,
+            tags: categoryList ?? '',
+            description: info ?? '',
         })
     }
 
