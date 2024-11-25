@@ -3,7 +3,7 @@ class Girigirilove extends AnimeSource{
 
     key = "girigirilove"
 
-    version = "1.0.5"
+    version = "1.0.6"
 
     minAppVersion = "1.0.0"
 
@@ -145,10 +145,20 @@ class Girigirilove extends AnimeSource{
                 ep.set('#', '第1話')
             }
 
-            let eps = {"繁体": ep,
-            "简体": ep2}
+            let eps = {
+                "繁体": ep,
+                "简体": ep2
+            }
 
-            let animes = animeDivs.map(a => this.parseAnime(a))
+            let animes = animeDivs.map(a => {
+                try {
+                    return this.parseAnime(a);  // 调用解析函数
+                } catch (e) {
+                    console.error("Error parsing anime:", e);  // 打印错误信息
+                    return null;  // 出错时返回 null 或其他默认值，跳过当前元素
+                }
+            }).filter(anime => anime !== null);  // 使用 filter 去除 null 值
+
             return new AnimeDetails({
                 id: id,
                 title: title,
