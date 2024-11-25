@@ -3,7 +3,7 @@ class Girigirilove extends AnimeSource{
 
     key = "girigirilove"
 
-    version = "1.0.4"
+    version = "1.0.5"
 
     minAppVersion = "1.0.0"
 
@@ -145,6 +145,9 @@ class Girigirilove extends AnimeSource{
                 ep.set('#', '第1話')
             }
 
+            let eps = {"繁体": ep,
+            "简体": ep2}
+
             let animes = animeDivs.map(a => this.parseAnime(a))
             return new AnimeDetails({
                 id: id,
@@ -156,8 +159,7 @@ class Girigirilove extends AnimeSource{
                     "演员": actors,
                     "类型": tags,
                 },
-                episode: ep,
-                episode2: ep2,
+                episode: eps,
                 recommend: animes,
                 url: this.baseUrl + id,
             })
