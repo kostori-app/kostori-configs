@@ -4,6 +4,12 @@
         "fileName": "girigirilove.js",
         "key": "girigirilove",
         "version": "1.0.7"
+    },
+    {
+        "name": "nayfun",
+        "fileName": "nayfun.js",
+        "key": "nayfun",
+        "version": "1.0.0"
     }
 
 ]
