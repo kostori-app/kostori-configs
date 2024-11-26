@@ -98,7 +98,7 @@ class Nayfun extends AnimeSource{
     anime = {
         loadInfo: async (id) => {
             let result = id.match(/\d+/)
-            let res = await Network.get(`${this.baseUrl}${result}`,{"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"})
+            let res = await Network.get(`${this.baseUrl}/${result}`,{"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"})
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
             }
