@@ -3,7 +3,7 @@ class Nayfun extends AnimeSource{
 
     key = "nayfun"
 
-    version = "1.0.0"
+    version = "1.0.1"
 
     minAppVersion = "1.0.0"
 
@@ -97,8 +97,7 @@ class Nayfun extends AnimeSource{
 
     anime = {
         loadInfo: async (id) => {
-            let result = id.match(/\d+/)
-            let res = await Network.get(`${this.baseUrl}/${result}`,{"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"})
+            let res = await Network.get(`${this.baseUrl}${id}`,{"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"})
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
             }
@@ -144,8 +143,7 @@ class Nayfun extends AnimeSource{
             }
 
             let eps = {
-                "繁体": ep,
-                "简体": ep2
+                "主线": ep,
             }
 
             let animes = animeDivs.map(a => {
@@ -200,4 +198,21 @@ class Nayfun extends AnimeSource{
         },
     }
 
+}
+
+function extractLinksAfterStrong(document, targetText) {
+    let strongElements = document.querySelectorAll('div.slide-info.hide >strong')
+    let linkElements = [];
+    for (let strong of strongElements) {
+        let strongText = strong.text.trim().replace(/[:：]/g, '').trim()
+        if (strongText === targetText) {
+            let parentElement = strong.parent;
+            let links = parentElement.querySelectorAll('a');
+            links.forEach(link => {
+                linkElements.push(link.text.trim());
+            });
+            break;
+        }
+    }
+    return linkElements;
 }
