@@ -172,20 +172,30 @@ class Nayfun extends AnimeSource{
         },
 
         loadEp: async (animeId, epId) => {
-            let res = await Network.get(`${this.baseUrl}${epId}`,{})
+            let res = await Network.get(`${this.baseUrl}${epId}`,{"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36 Edg/127.0.0.0"})
             if (res.status !== 200) {
                 throw "Invalid status code: " + res.status
             }
             let document = new HtmlDocument(res.body)
             let div = document.querySelector('.player-left') || document.querySelector('.player-top')
-            let scriptContent = div.querySelector('script').text;
-            let scriptLines = scriptContent.split(',').map(line => line.trim());
-            for (let line of scriptLines) {
-                if (line.includes('"url"')) {
-                    let encoded = line.split(':')[1].replace(/"/g, '').replace(/,/g, '');
-                    let decoded = Convert.decodeBase64(encoded)
-                    let urlEncoded = Convert.decodeUtf8(decoded);
-                    return decodeURIComponent(urlEncoded)
+            const scriptText = Array.from(div.querySelectorAll('script'))
+                .map(script => script.text || '')
+                .join(',')
+                .split(',')
+                .map(e => e.trim());
+            for (let line of scriptText) {
+                if (line.includes("\"url\"")) {
+                    // 提取 base64 编码的部分
+                    const encoded = line.split(':')[1].replace(/"/g, '').replace(/,/g, '');
+
+                    // 解码 base64 内容
+                    const decoded = Convert.decodeBase64(encoded); // atob 用于解码 base64 编码的字符串
+                    const urlEncoded = new TextDecoder().decode(decoded);
+                    console.log(urlEncoded)
+                    const videoLink = decodeURIComponent(urlEncoded); // 解码 URL 编码
+
+                    console.log('Parsed video link:', videoLink);
+                    return videoLink;
                 }
             }
         },
