@@ -3,7 +3,7 @@ class Girigirilove extends AnimeSource{
 
     key = "girigirilove"
 
-    version = "1.0.6"
+    version = "1.0.7"
 
     minAppVersion = "1.0.0"
 
@@ -43,8 +43,9 @@ class Girigirilove extends AnimeSource{
     }
 
 
-    explore = [{
-        title: "ggl最新",
+    explore = [
+        {
+        title: "ggl日番",
 
         type: "mixed",
 
@@ -63,7 +64,50 @@ class Girigirilove extends AnimeSource{
                 maxPage: 20000
             }  // 返回包含所有动漫信息的数组
         }
-    }]
+    },
+        {
+            title: "ggl美番",
+
+            type: "mixed",
+
+            load: async (page) => {
+                let res = await Network.get(`https://anime.girigirilove.com/show/3--------${page}---/`,{"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"})
+                if(res.status !== 200) {
+                    throw `Invalid Status Code ${res.status}`
+                }
+                let document = new HtmlDocument(res.body)
+                let animeDivs = document.querySelectorAll('div.public-list-box')
+                let animeList = []
+                let animes = animeDivs.map(a => this.parseAnime(a))
+                animeList.push(animes)
+                return {
+                    data: animeList,
+                    maxPage: 20000
+                }  // 返回包含所有动漫信息的数组
+            }
+        },
+        {
+            title: "ggl剧场版",
+
+            type: "mixed",
+
+            load: async (page) => {
+                let res = await Network.get(`https://anime.girigirilove.com/show/21--------${page}--/`,{"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"})
+                if(res.status !== 200) {
+                    throw `Invalid Status Code ${res.status}`
+                }
+                let document = new HtmlDocument(res.body)
+                let animeDivs = document.querySelectorAll('div.public-list-box')
+                let animeList = []
+                let animes = animeDivs.map(a => this.parseAnime(a))
+                animeList.push(animes)
+                return {
+                    data: animeList,
+                    maxPage: 20000
+                }  // 返回包含所有动漫信息的数组
+            }
+        }
+    ]
 
     search = {
         load:async (keyword, page) => {
