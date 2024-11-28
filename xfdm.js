@@ -3,7 +3,7 @@ class Xfdm extends AnimeSource{
 
     key = "xfdm"
 
-    version = "1.0.0"
+    version = "1.0.1"
 
     minAppVersion = "1.0.0"
 
@@ -11,6 +11,19 @@ class Xfdm extends AnimeSource{
 
     get baseUrl() {
         return `https://dm1.xfdm.pro`
+    }
+
+    get headers() {
+        let token = this.loadData('token')
+        let headers = {
+            'Referer': 'https://dm1.xfdm.pro/',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36',
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+        }
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`
+        }
+        return headers
     }
 
     account = null
@@ -32,7 +45,7 @@ class Xfdm extends AnimeSource{
         let categoryList = category ? category.split(',').map((e) => e.trim()) : [];
 
         return new Anime({
-            id: id,
+            id: id.replace(/\D/g, ""),
             title: name,
             subtitle: subName ?? '',
             cover: image,
@@ -41,12 +54,61 @@ class Xfdm extends AnimeSource{
         })
     }
 
+    decrypt() {
+        const time = Math.ceil(new Date().getTime() / 1000);
+        return { time, key: Convert.hexEncode(Convert.md5(Convert.encodeUtf8("DS" + time + "DCC147D11943AF75"))) }; // EC.Pop.Uid: DCC147D11943AF75
+    }
+
+    async queryJson(query) {
+
+        let res = await Network.post(
+            'https://dm1.xfdm.pro/index.php/api/vod',
+            this.headers,
+            query
+        )
+
+        if (res.status !== 200) {
+            throw `Invalid Status Code ${res.status}`
+        }
+
+        return JSON.parse(res.body)
+    }
+
+    async queryAnimes(query) {
+        let json = await this.queryJson(query)
+
+        console.log(json.list)
+        function parseAnimed(anime) {
+            let tags = anime.vod_class ? anime.vod_class.split(',') : []
+
+            return new Anime(
+                {
+                    id: String(anime.vod_id),
+                    title: anime.vod_name,
+                    subTitle: anime.vod_sub,
+                    cover: anime.vod_pic,
+                    tags: tags,
+                    description: ''
+                }
+            )
+        }
+
+        let animeList = []
+        let animes = json.list.map(a => parseAnimed(a))
+        animeList.push(animes)
+        return {
+            data: animeList,
+            // 没找到最大页数的接口
+            maxPage: null
+        }
+    }
+
     explore = [{
         title: "稀饭动漫最新",
 
         type: "mixed",
 
-        load: async (page) => {
+        load: async () => {
             let res = await Network.get(`https://dm1.xfdm.pro/map.html`,{"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"})
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
@@ -61,7 +123,48 @@ class Xfdm extends AnimeSource{
                 maxPage: 20000
             }  // 返回包含所有动漫信息的数组
         }
-    }]
+        },
+        {
+            title: "稀饭动漫连载新番",
+
+            type: "mixed",
+
+            load: async (page) => {
+                const { time, key } = this.decrypt();
+                return await this.queryAnimes({ "type": 1, "class": "", "page": page, "time": time, "key": key })
+            }
+        },
+        {
+            title: "稀饭动漫完结旧番",
+
+            type: "mixed",
+
+            load: async (page) => {
+                const { time, key } = this.decrypt();
+                return await this.queryAnimes({ "type": 2, "class": "", "page": page, "time": time, "key": key })
+            }
+        },
+        {
+            title: "稀饭动漫剧场版",
+
+            type: "mixed",
+
+            load: async (page) => {
+                const { time, key } = this.decrypt();
+                return await this.queryAnimes({ "type": 3, "class": "", "page": page, "time": time, "key": key })
+            }
+        },
+        {
+            title: "稀饭动漫美漫",
+
+            type: "mixed",
+
+            load: async (page) => {
+                const { time, key } = this.decrypt();
+                return await this.queryAnimes({ "type": 21, "class": "", "page": page, "time": time, "key": key })
+            }
+        },
+    ]
 
     search = {
         load:async (keyword, page) => {
@@ -80,7 +183,7 @@ class Xfdm extends AnimeSource{
                 let info = div.querySelector('.public-list-prb.hide.ft2').text.trim() ?? ''
                 let category = div.querySelector('.thumb-else.cor5.hide').querySelectorAll('a').map(a => a.text.trim())
                 animes.push({
-                    id: id,
+                    id: id.replace(/\D/g, ""),
                     title: title,
                     subtitle: '',
                     cover: image,
@@ -97,7 +200,7 @@ class Xfdm extends AnimeSource{
 
     anime = {
         loadInfo: async (id) => {
-            let res = await Network.get(`${this.baseUrl}${id}`,{"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"})
+            let res = await Network.get(`${this.baseUrl}/bangumi/${id}`,{"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"})
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
             }
@@ -164,7 +267,7 @@ class Xfdm extends AnimeSource{
             }).filter(anime => anime !== null);  // 使用 filter 去除 null 值
 
             return new AnimeDetails({
-                id: id,
+                id: id.replace(/\D/g, ""),
                 title: title,
                 cover: imageUrl,
                 description: description,
