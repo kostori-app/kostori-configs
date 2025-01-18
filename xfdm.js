@@ -3,7 +3,7 @@ class Xfdm extends AnimeSource{
 
     key = "xfdm"
 
-    version = "1.0.1"
+    version = "1.0.2"
 
     minAppVersion = "1.0.0"
 
@@ -88,7 +88,7 @@ class Xfdm extends AnimeSource{
                     subTitle: anime.vod_sub,
                     cover: anime.vod_pic,
                     tags: tags,
-                    description: ''
+                    description: anime.vod_remarks
                 }
             )
         }
