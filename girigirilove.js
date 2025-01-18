@@ -3,7 +3,7 @@ class Girigirilove extends AnimeSource{
 
     key = "girigirilove"
 
-    version = "1.0.7"
+    version = "1.0.8"
 
     minAppVersion = "1.0.0"
 
@@ -156,6 +156,12 @@ class Girigirilove extends AnimeSource{
             let director = extractLinksAfterStrong(document, '导演')
             let actors = extractLinksAfterStrong(document, '演员')
             let tags = extractLinksAfterStrong(document, '类型')
+            let slideInfo = document.querySelector('.slide-info.hide')
+            let spanElements = slideInfo.querySelectorAll('span.slide-info-remarks')
+            let broadcastDate = []
+            spanElements.forEach(span => {
+                broadcastDate.push(span.text.trim())
+            });
             let imageElement = document.querySelector('div.detail-pic img')
             let imageUrl = imageElement.attributes['data-src'] ?? ''
             let cover = `${this.baseUrl}${imageUrl}`
@@ -186,7 +192,7 @@ class Girigirilove extends AnimeSource{
                 }
             }
             if (ep.size === 0) {
-                ep.set('#', '第1話')
+                ep.set('#', '暂无剧集')
             }
 
             let eps = {
@@ -209,6 +215,7 @@ class Girigirilove extends AnimeSource{
                 cover: cover,
                 description: description,
                 tags: {
+                    "放送日期": broadcastDate,
                     "导演": director,
                     "演员": actors,
                     "类型": tags,
