@@ -77,7 +77,6 @@ class Xfdm extends AnimeSource{
     async queryAnimes(query) {
         let json = await this.queryJson(query)
 
-        console.log(json.list)
         function parseAnimed(anime) {
             let tags = anime.vod_class ? anime.vod_class.split(',') : []
 

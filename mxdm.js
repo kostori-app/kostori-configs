@@ -84,7 +84,7 @@ class Mxdm extends AnimeSource{
             }
         },
         {
-            title: "mxdm欧番",
+            title: "mxdm美番",
             type: "mixed",
             load: async (page) => {
                 let res = await Network.get(`${this.baseUrl}show/oman--------${page}---.html`,{"User-Agent": this.userAgent});
@@ -180,7 +180,7 @@ class Mxdm extends AnimeSource{
             let description = descriptionElement.text.trim() ?? ''
             let tags = extractTagsFromLabel(document, '标签')
             let imageElement = document.querySelector('div.module-item-pic img');
-            let imageUrl = imageElement.attributes('data-src') ?? '';
+            let imageUrl = imageElement.attributes['data-src'] ?? ''
             let episodeElements = document.querySelectorAll('.module-blocklist a');
             let ep = new Map();
             let ep2 = new Map();
@@ -271,7 +271,7 @@ class Mxdm extends AnimeSource{
                 throw "Invalid status from m3u8: " + res2.status;
             }
 
-            let html = res2.body; // 原始 HTML 字符串
+            let html = res2.body;
 
             function getBetween(text, key) {
                 const parts = text.split(key);
@@ -287,7 +287,6 @@ class Mxdm extends AnimeSource{
 
             let encryptedUrl = getBetween(html, "getVideoInfo(");
             let btToken = getBetween(html, "bt_token");
-
             if (!encryptedUrl || !btToken) {
                 throw "未找到 encryptedUrl 或 btToken";
             }
