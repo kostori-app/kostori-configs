@@ -3,7 +3,7 @@ class Girigirilove extends AnimeSource{
 
     key = "girigirilove"
 
-    version = "1.0.8"
+    version = "1.0.9"
 
     minAppVersion = "1.0.0"
 
@@ -11,6 +11,10 @@ class Girigirilove extends AnimeSource{
 
     get baseUrl() {
         return `https://anime.girigirilove.com`
+    }
+
+    get userAgent(){
+        return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36'
     }
 
     account = null
@@ -50,7 +54,7 @@ class Girigirilove extends AnimeSource{
         type: "mixed",
 
         load: async (page) => {
-            let res = await Network.get(`https://anime.girigirilove.com/show/2--------${page}---/`,{"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"})
+            let res = await Network.get(`https://anime.girigirilove.com/show/2--------${page}---/`,{"User-Agent": this.userAgent})
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
             }
@@ -71,7 +75,7 @@ class Girigirilove extends AnimeSource{
             type: "mixed",
 
             load: async (page) => {
-                let res = await Network.get(`https://anime.girigirilove.com/show/3--------${page}---/`,{"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"})
+                let res = await Network.get(`https://anime.girigirilove.com/show/3--------${page}---/`,{"User-Agent": this.userAgent})
                 if(res.status !== 200) {
                     throw `Invalid Status Code ${res.status}`
                 }
@@ -92,7 +96,7 @@ class Girigirilove extends AnimeSource{
             type: "mixed",
 
             load: async (page) => {
-                let res = await Network.get(`https://anime.girigirilove.com/show/21--------${page}---/`,{"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"})
+                let res = await Network.get(`https://anime.girigirilove.com/show/21--------${page}---/`,{"User-Agent": this.userAgent})
                 if(res.status !== 200) {
                     throw `Invalid Status Code ${res.status}`
                 }
@@ -112,7 +116,7 @@ class Girigirilove extends AnimeSource{
     search = {
         load:async (keyword, page) => {
             let url = `${this.baseUrl}/search/${keyword}----------${page}---/`
-            let res = await Network.get(url, {})
+            let res = await Network.get(url, {"User-Agent": this.userAgent})
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
             }
@@ -143,7 +147,7 @@ class Girigirilove extends AnimeSource{
 
     anime = {
         loadInfo: async (id) => {
-            let res = await Network.get(`${this.baseUrl}${id}`,{"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"})
+            let res = await Network.get(`${this.baseUrl}${id}`,{"User-Agent": this.userAgent})
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
             }
@@ -227,7 +231,7 @@ class Girigirilove extends AnimeSource{
         },
 
         loadEp: async (animeId, epId) => {
-            let res = await Network.get(`${this.baseUrl}${epId}`,{})
+            let res = await Network.get(`${this.baseUrl}${epId}`,{"User-Agent": this.userAgent})
             if (res.status !== 200) {
                 throw "Invalid status code: " + res.status
             }

@@ -3,7 +3,7 @@ class Xfdm extends AnimeSource{
 
     key = "xfdm"
 
-    version = "1.0.2"
+    version = "1.0.3"
 
     minAppVersion = "1.0.0"
 
@@ -109,7 +109,7 @@ class Xfdm extends AnimeSource{
         type: "mixed",
 
         load: async () => {
-            let res = await Network.get(`https://dm1.xfdm.pro/map.html`,{"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"})
+            let res = await Network.get(`https://dm1.xfdm.pro/map.html`,this.headers)
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
             }
@@ -120,7 +120,7 @@ class Xfdm extends AnimeSource{
             animeList.push(animes)
             return {
                 data: animeList,
-                maxPage: 20000
+                maxPage: 1
             }  // 返回包含所有动漫信息的数组
         }
         },
@@ -169,7 +169,7 @@ class Xfdm extends AnimeSource{
     search = {
         load:async (keyword, page) => {
             let url = `https://dm1.xfdm.pro/search/wd/${keyword}/page/${page}.html`
-            let res = await Network.get(url, {})
+            let res = await Network.get(url, this.headers,)
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
             }
@@ -200,7 +200,7 @@ class Xfdm extends AnimeSource{
 
     anime = {
         loadInfo: async (id) => {
-            let res = await Network.get(`${this.baseUrl}/bangumi/${id}`,{"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"})
+            let res = await Network.get(`${this.baseUrl}/bangumi/${id}`,this.headers,)
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
             }
@@ -283,7 +283,7 @@ class Xfdm extends AnimeSource{
         },
 
         loadEp: async (animeId, epId) => {
-            let res = await Network.get(`${this.baseUrl}${epId}`,{})
+            let res = await Network.get(`${this.baseUrl}${epId}`,this.headers,)
             if (res.status !== 200) {
                 throw "Invalid status code: " + res.status
             }
