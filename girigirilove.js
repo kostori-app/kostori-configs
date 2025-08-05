@@ -1,3 +1,4 @@
+/** @type {import('./_kostori_.js')} */
 class Girigirilove extends AnimeSource{
     name = "girigirilove"
 
@@ -16,8 +17,6 @@ class Girigirilove extends AnimeSource{
     get userAgent(){
         return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36'
     }
-
-    account = null
 
     parseAnime(a) {
         let link = a.querySelector('a.public-list-exp')

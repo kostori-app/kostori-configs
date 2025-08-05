@@ -9,13 +9,18 @@
         "name": "mxdm",
         "fileName": "mxdm.js",
         "key": "mxdm",
-        "version": "1.0.0"
+        "version": "1.0.1"
     },
     {
         "name": "xfdm",
         "fileName": "xfdm.js",
         "key": "xfdm",
         "version": "1.0.3"
+    },
+    {
+        "name": "xgkt",
+        "fileName": "xgkt.js",
+        "key": "xgkt",
+        "version": "1.0.0"
     }
-
 ]

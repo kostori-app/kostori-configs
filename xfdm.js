@@ -1,3 +1,4 @@
+/** @type {import('./_kostori_.js')} */
 class Xfdm extends AnimeSource{
     name = "xfdm"
 
@@ -25,8 +26,6 @@ class Xfdm extends AnimeSource{
         }
         return headers
     }
-
-    account = null
 
     parseAnime(a) {
         let link = a.querySelector('a.public-list-exp')
@@ -97,7 +96,6 @@ class Xfdm extends AnimeSource{
         animeList.push(animes)
         return {
             data: animeList,
-            // 没找到最大页数的接口
             maxPage: null
         }
     }

@@ -1,11 +1,12 @@
+/** @type {import('./_kostori_.js')} */
 class Mxdm extends AnimeSource{
     name = 'mxdm'
 
     key = 'mxdm'
 
-    version = '1.0.0'
+    version = '1.0.1'
 
-    minAppVersion = '1.0.0'
+    minAppVersion = '1.2.1'
 
     url = "https://raw.githubusercontent.com/kostori-app/kostori-configs/master/mxdm.js"
 
@@ -41,8 +42,6 @@ class Mxdm extends AnimeSource{
             description: info ?? '',
         });
     }
-
-    account = null
 
     explore = [
         {
@@ -239,7 +238,7 @@ class Mxdm extends AnimeSource{
         },
 
         loadEp: async (animeId, epId) => {
-            let res = await Network.get(`${this.baseUrl}${epId}`, {"User-Agent": this.userAgent});
+            let res = await Network.get(`${this.baseUrl}${epId}`, {});
             if (res.status !== 200) {
                 throw "Invalid status code: " + res.status;
             }
@@ -266,7 +265,7 @@ class Mxdm extends AnimeSource{
             let jsonObj = JSON.parse(jsonStr);
             let url = jsonObj.url;
             if (!url) throw "未找到 player_aaaa.url";
-            let res2 = await Network.get(`https://danmu.yhdmjx.com/m3u8.php?url=${url}`, {"User-Agent": this.userAgent});
+            let res2 = await Network.get(`https://danmu.yhdmjx.com/m3u8.php?url=${url}`, {});
             if (res2.status !== 200) {
                 throw "Invalid status from m3u8: " + res2.status;
             }
