@@ -58,7 +58,7 @@ class Xgkt extends AnimeSource {
                     subTitle: anime.author,
                     cover: 'https://static-a.xgcartoon.com/cover/' + anime.topic_img,
                     tags: anime.type_names,
-                    description: anime.region
+                    description: anime.author
                 }
             )
         }
