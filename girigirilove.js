@@ -146,7 +146,7 @@ class Girigirilove extends AnimeSource{
 
     anime = {
         loadInfo: async (id) => {
-            let res = await Network.get(`${this.baseUrl}${id}`,{"User-Agent": this.userAgent})
+            let res = await Network.get(`${this.baseUrl}${id}`,{})
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
             }
@@ -230,7 +230,7 @@ class Girigirilove extends AnimeSource{
         },
 
         loadEp: async (animeId, epId) => {
-            let res = await Network.get(`${this.baseUrl}${epId}`,{"User-Agent": this.userAgent})
+            let res = await Network.get(`${this.baseUrl}${epId}`,{})
             if (res.status !== 200) {
                 throw "Invalid status code: " + res.status
             }

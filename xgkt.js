@@ -154,7 +154,7 @@ class Xgkt extends AnimeSource {
     anime = {
 
         loadInfo: async (id) => {
-            let res = await Network.get(`${this.baseUrl}detail/${id}`,this.headers,)
+            let res = await Network.get(`${this.baseUrl}detail/${id}`,{},)
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
             }

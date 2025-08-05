@@ -197,7 +197,7 @@ class Xfdm extends AnimeSource{
 
     anime = {
         loadInfo: async (id) => {
-            let res = await Network.get(`${this.baseUrl}/bangumi/${id}`,this.headers,)
+            let res = await Network.get(`${this.baseUrl}/bangumi/${id}`,{},)
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
             }
@@ -280,7 +280,7 @@ class Xfdm extends AnimeSource{
         },
 
         loadEp: async (animeId, epId) => {
-            let res = await Network.get(`${this.baseUrl}${epId}`,this.headers,)
+            let res = await Network.get(`${this.baseUrl}${epId}`,{},)
             if (res.status !== 200) {
                 throw "Invalid status code: " + res.status
             }

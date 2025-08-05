@@ -167,7 +167,7 @@ class Mxdm extends AnimeSource{
 
     anime = {
         loadInfo: async (id) => {
-            let res = await Network.get(`${this.baseUrl}dongman/${id}`,{"User-Agent": this.userAgent})
+            let res = await Network.get(`${this.baseUrl}dongman/${id}`,{})
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
             }
