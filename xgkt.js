@@ -5,7 +5,7 @@ class Xgkt extends AnimeSource {
 
     key = "xgkt"
 
-    version = "1.0.0"
+    version = "1.0.1"
 
     minAppVersion = "1.0.0"
 
@@ -179,15 +179,7 @@ class Xgkt extends AnimeSource {
                     title = `第${ep.size + 1}話`;
                 }
 
-                let match = link.match(/chapter_id=([a-zA-Z0-9]+)/);
-                if (match) {
-                    const id = match[1];
-                    const prefix = id.charCodeAt(0) % 3;
-
-                    if (prefix === 0) {
-                        ep.set(link, title);
-                    }
-                }
+                ep.set(link, title);
             }
 
             if (ep.size === 0) {
