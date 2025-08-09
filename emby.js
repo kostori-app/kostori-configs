@@ -5,7 +5,7 @@ class Emby extends AnimeSource {
 
     key = "emby"
 
-    version = "1.0.0"
+    version = "1.0.1"
 
     minAppVersion = "1.0.0"
 
@@ -365,7 +365,7 @@ class Emby extends AnimeSource {
         address: {
             title: "Address",
             type: "input",
-            validator: '^(?!:\\/\\/)(?=.{1,253})([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,}$',
+            validator: '^(?:\\d{1,3}\\.){3}\\d{1,3}$|^(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,}$',
             default: '127.0.0.1',
         },
         post: {
