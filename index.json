@@ -28,5 +28,10 @@
         "fileName": "kimivod.js",
         "key": "kimivod",
         "version": "1.0.1"
+    },{
+        "name": "emby",
+        "fileName": "emby.js",
+        "key": "emby",
+        "version": "1.0.0"
     }
 ]
