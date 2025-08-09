@@ -5,7 +5,7 @@ class Kimivod extends AnimeSource {
 
     key = "kimivod"
 
-    version = "1.0.0"
+    version = "1.0.1"
 
     minAppVersion = "1.0.0"
 
@@ -65,6 +65,7 @@ class Kimivod extends AnimeSource {
                 let animeList = []
                 let animes = animeDivs.map(a => this.parseAnime(a))
                 animeList.push(animes)
+                document.dispose()
                 return {
                     data: animeList,
                     maxPage: 20000
@@ -86,6 +87,7 @@ class Kimivod extends AnimeSource {
                 let animeList = []
                 let animes = animeDivs.map(a => this.parseAnime(a))
                 animeList.push(animes)
+                document.dispose()
                 return {
                     data: animeList,
                     maxPage: 20000
@@ -107,6 +109,7 @@ class Kimivod extends AnimeSource {
                 let animeList = []
                 let animes = animeDivs.map(a => this.parseAnime(a))
                 animeList.push(animes)
+                document.dispose()
                 return {
                     data: animeList,
                     maxPage: 20000
@@ -128,6 +131,7 @@ class Kimivod extends AnimeSource {
                 let animeList = []
                 let animes = animeDivs.map(a => this.parseAnime(a))
                 animeList.push(animes)
+                document.dispose()
                 return {
                     data: animeList,
                     maxPage: 20000
@@ -149,6 +153,7 @@ class Kimivod extends AnimeSource {
                 let animeList = []
                 let animes = animeDivs.map(a => this.parseAnime(a))
                 animeList.push(animes)
+                document.dispose()
                 return {
                     data: animeList,
                     maxPage: 20000
@@ -170,6 +175,7 @@ class Kimivod extends AnimeSource {
                 let animeList = []
                 let animes = animeDivs.map(a => this.parseAnime(a))
                 animeList.push(animes)
+                document.dispose()
                 return {
                     data: animeList,
                     maxPage: 20000
@@ -220,6 +226,7 @@ class Kimivod extends AnimeSource {
                     description: description,
                 });
             }
+            document.dispose()
 
             return {
                 animes: animes,
@@ -290,6 +297,7 @@ class Kimivod extends AnimeSource {
                     return null;  // 出错时返回 null 或其他默认值，跳过当前元素
                 }
             }).filter(anime => anime !== null);
+            document.dispose()
 
             return new AnimeDetails({
                 id: id,

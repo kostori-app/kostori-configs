@@ -4,7 +4,7 @@ class Mxdm extends AnimeSource{
 
     key = 'mxdm'
 
-    version = '1.0.1'
+    version = '1.0.2'
 
     minAppVersion = '1.2.1'
 
@@ -57,6 +57,7 @@ class Mxdm extends AnimeSource{
                 let animeList = []
                 let animes = animeDivs.map(a => this.parseAnime(a))
                 animeList.push(animes)
+                document.dispose()
                 return {
                     data: animeList,
                     maxPage: 20000
@@ -76,6 +77,7 @@ class Mxdm extends AnimeSource{
                 let animeList = []
                 let animes = animeDivs.map(a => this.parseAnime(a))
                 animeList.push(animes)
+                document.dispose()
                 return {
                     data: animeList,
                     maxPage: 20000
@@ -95,6 +97,7 @@ class Mxdm extends AnimeSource{
                 let animeList = []
                 let animes = animeDivs.map(a => this.parseAnime(a))
                 animeList.push(animes)
+                document.dispose()
                 return {
                     data: animeList,
                     maxPage: 20000
@@ -114,6 +117,7 @@ class Mxdm extends AnimeSource{
                 let animeList = []
                 let animes = animeDivs.map(a => this.parseAnime(a))
                 animeList.push(animes)
+                document.dispose()
                 return {
                     data: animeList,
                     maxPage: 20000
@@ -157,7 +161,7 @@ class Mxdm extends AnimeSource{
                 });
             }
 
-
+            document.dispose()
             return {
                 animes: animes,
                 maxPage: 999
@@ -222,7 +226,7 @@ class Mxdm extends AnimeSource{
                     return null;
                 }
             }).filter(anime => anime !== null);
-
+            document.dispose()
             return new AnimeDetails({
                 id: id,
                 title: title,
@@ -295,6 +299,7 @@ class Mxdm extends AnimeSource{
             let encryptedBytes =  Convert.decodeBase64(encryptedUrl);
             let decryptedBytes =  Convert.decryptAesCbc(encryptedBytes, keyBytes, ivBytes);
             let decrypted = Convert.decodeUtf8(decryptedBytes);
+            document.dispose()
             return decodeURIComponent(decrypted);
         },
 

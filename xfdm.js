@@ -4,7 +4,7 @@ class Xfdm extends AnimeSource{
 
     key = "xfdm"
 
-    version = "1.0.3"
+    version = "1.0.4"
 
     minAppVersion = "1.0.0"
 
@@ -115,6 +115,7 @@ class Xfdm extends AnimeSource{
             let animeList = []
             let animes = animeDivs.map(a => this.parseAnime(a))
             animeList.push(animes)
+            document.dispose()
             return {
                 data: animeList,
                 maxPage: 1
@@ -188,6 +189,7 @@ class Xfdm extends AnimeSource{
                     description: info,
                 })
             }
+            document.dispose()
             return {
                 animes: animes,
                 maxPage: 999
@@ -262,7 +264,7 @@ class Xfdm extends AnimeSource{
                     return null;  // 出错时返回 null 或其他默认值，跳过当前元素
                 }
             }).filter(anime => anime !== null);  // 使用 filter 去除 null 值
-
+            document.dispose()
             return new AnimeDetails({
                 id: id.replace(/\D/g, ""),
                 title: title,

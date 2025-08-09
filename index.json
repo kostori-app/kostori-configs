@@ -3,30 +3,30 @@
         "name": "girigirilove",
         "fileName": "girigirilove.js",
         "key": "girigirilove",
-        "version": "1.0.9"
+        "version": "1.1.0"
     },
     {
         "name": "mxdm",
         "fileName": "mxdm.js",
         "key": "mxdm",
-        "version": "1.0.1"
+        "version": "1.0.2"
     },
     {
         "name": "xfdm",
         "fileName": "xfdm.js",
         "key": "xfdm",
-        "version": "1.0.3"
+        "version": "1.0.4"
     },
     {
         "name": "xgkt",
         "fileName": "xgkt.js",
         "key": "xgkt",
-        "version": "1.0.1"
+        "version": "1.0.2"
     },
     {
         "name": "kimivod",
         "fileName": "kimivod.js",
         "key": "kimivod",
-        "version": "1.0.0"
+        "version": "1.0.1"
     }
 ]

@@ -5,7 +5,7 @@ class Xgkt extends AnimeSource {
 
     key = "xgkt"
 
-    version = "1.0.1"
+    version = "1.0.2"
 
     minAppVersion = "1.0.0"
 
@@ -141,7 +141,7 @@ class Xgkt extends AnimeSource {
                     description: info,
                 });
             }
-
+            document.dispose()
             return {
                 animes: animes,
                 maxPage: 1
@@ -198,7 +198,7 @@ class Xgkt extends AnimeSource {
                     return null;
                 }
             }).filter(anime => anime !== null);
-
+            document.dispose()
             return new AnimeDetails({
                 id: id.replace(/\D/g, ""),
                 title: title,
@@ -252,6 +252,7 @@ class Xgkt extends AnimeSource {
             let vidMatch = iframeSrcTrim.match(/[?&]vid=([^&]+)/);
             if (vidMatch) {
                 let vid = decodeURIComponent(vidMatch[1]);
+                doc.dispose()
                 return `https://xgct-video.vzcdn.net/${vid}/playlist.m3u8`;
             }
 
@@ -274,7 +275,8 @@ class Xgkt extends AnimeSource {
             if (!videoUrl) {
                 throw new Error("未获取到 video source");
             }
-
+            doc.dispose()
+            innerDoc.dispose()
             return videoUrl;
 
         },

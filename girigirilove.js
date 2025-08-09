@@ -4,7 +4,7 @@ class Girigirilove extends AnimeSource{
 
     key = "girigirilove"
 
-    version = "1.0.9"
+    version = "1.1.0"
 
     minAppVersion = "1.0.0"
 
@@ -62,6 +62,7 @@ class Girigirilove extends AnimeSource{
             let animeList = []
             let animes = animeDivs.map(a => this.parseAnime(a))
             animeList.push(animes)
+            document.dispose()
             return {
                 data: animeList,
                 maxPage: 20000
@@ -83,6 +84,7 @@ class Girigirilove extends AnimeSource{
                 let animeList = []
                 let animes = animeDivs.map(a => this.parseAnime(a))
                 animeList.push(animes)
+                document.dispose()
                 return {
                     data: animeList,
                     maxPage: 20000
@@ -104,6 +106,7 @@ class Girigirilove extends AnimeSource{
                 let animeList = []
                 let animes = animeDivs.map(a => this.parseAnime(a))
                 animeList.push(animes)
+                document.dispose()
                 return {
                     data: animeList,
                     maxPage: 20000
@@ -137,6 +140,7 @@ class Girigirilove extends AnimeSource{
                     description: info,
                 })
             }
+            document.dispose()
             return {
                 animes: animes,
                 maxPage: 999
@@ -211,7 +215,7 @@ class Girigirilove extends AnimeSource{
                     return null;  // 出错时返回 null 或其他默认值，跳过当前元素
                 }
             }).filter(anime => anime !== null);  // 使用 filter 去除 null 值
-
+            document.dispose()
             return new AnimeDetails({
                 id: id,
                 title: title,
@@ -243,6 +247,7 @@ class Girigirilove extends AnimeSource{
                     let encoded = line.split(':')[1].replace(/"/g, '').replace(/,/g, '');
                     let decoded = Convert.decodeBase64(encoded)
                     let urlEncoded = Convert.decodeUtf8(decoded);
+                    document.dispose()
                     return decodeURIComponent(urlEncoded)
                 }
             }
