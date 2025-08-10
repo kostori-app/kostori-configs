@@ -52,11 +52,11 @@ class Iwara extends AnimeSource {
 
         return new Anime({
             id: id,
-            title: title,
-            subtitle: author,
-            cover: cover,
+            title: title ?? '',
+            subtitle: author ?? '',
+            cover: cover ?? '',
             tags: tags ?? [],
-            description: subtitle,
+            description: subtitle ?? '',
         });
     }
 
