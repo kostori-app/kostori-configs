@@ -5,7 +5,7 @@ class Iwara extends AnimeSource {
 
     key = "iwara"
 
-    version = "1.0.1"
+    version = "1.0.2"
 
     minAppVersion = "1.0.0"
 
@@ -68,7 +68,7 @@ class Iwara extends AnimeSource {
 
             load: async (page) => {
                 let startIndex = page - 1;
-                let res = await Network.get(`${this.baseUrl}videos?sort=trending&page=${startIndex}&limit=40&${this.rating}`,this.headers)
+                let res = await Network.get(`${this.baseUrl}videos?sort=trending&page=${startIndex}&limit=40&rating=${this.rating}`,this.headers)
                 if(res.status !== 200) {
                     throw `Invalid Status Code ${res.status}`
                 }
@@ -90,7 +90,7 @@ class Iwara extends AnimeSource {
 
             load: async (page) => {
                 let startIndex = page - 1;
-                let res = await Network.get(`${this.baseUrl}videos?sort=date&page=${startIndex}&limit=40&${this.rating}`,this.headers)
+                let res = await Network.get(`${this.baseUrl}videos?sort=date&page=${startIndex}&limit=40&rating=${this.rating}`,this.headers)
                 if(res.status !== 200) {
                     throw `Invalid Status Code ${res.status}`
                 }
@@ -112,7 +112,7 @@ class Iwara extends AnimeSource {
 
             load: async (page) => {
                 let startIndex = page - 1;
-                let res = await Network.get(`${this.baseUrl}videos?sort=popularity&page=${startIndex}&limit=40&${this.rating}`,this.headers)
+                let res = await Network.get(`${this.baseUrl}videos?sort=popularity&page=${startIndex}&limit=40&rating=${this.rating}`,this.headers)
                 if(res.status !== 200) {
                     throw `Invalid Status Code ${res.status}`
                 }
@@ -134,7 +134,7 @@ class Iwara extends AnimeSource {
 
             load: async (page) => {
                 let startIndex = page - 1;
-                let res = await Network.get(`${this.baseUrl}videos?sort=views&page=${startIndex}&limit=40&${this.rating}`,this.headers)
+                let res = await Network.get(`${this.baseUrl}videos?sort=views&page=${startIndex}&limit=40&rating=${this.rating}`,this.headers)
                 if(res.status !== 200) {
                     throw `Invalid Status Code ${res.status}`
                 }
@@ -156,7 +156,7 @@ class Iwara extends AnimeSource {
 
             load: async (page) => {
                 let startIndex = page - 1;
-                let res = await Network.get(`${this.baseUrl}videos?sort=likes&page=${startIndex}&limit=40&${this.rating}`,this.headers)
+                let res = await Network.get(`${this.baseUrl}videos?sort=likes&page=${startIndex}&limit=40&rating=${this.rating}`,this.headers)
                 if(res.status !== 200) {
                     throw `Invalid Status Code ${res.status}`
                 }
@@ -177,7 +177,7 @@ class Iwara extends AnimeSource {
     search = {
         load:async (keyword, page) => {
             let startIndex = page - 1;
-            let url = `${this.baseUrl}search?query=${keyword}&page=${startIndex}&limit=40&type=video&${this.rating}`
+            let url = `${this.baseUrl}search?query=${keyword}&page=${startIndex}&limit=40&type=video&rating=${this.rating}`
             let res = await Network.get(url, this.headers)
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
