@@ -33,5 +33,10 @@
         "fileName": "emby.js",
         "key": "emby",
         "version": "1.0.1"
+    },{
+        "name": "iwara",
+        "fileName": "iwara.js",
+        "key": "iwara",
+        "version": "1.0.0"
     }
 ]
