@@ -5,7 +5,7 @@ class Iwara extends AnimeSource {
 
     key = "iwara"
 
-    version = "1.0.2"
+    version = "1.0.3"
 
     minAppVersion = "1.0.0"
 
@@ -39,12 +39,12 @@ class Iwara extends AnimeSource {
         let id = a.id;
         let title = a.title;
         let author = a.user.name;
-        let durationInSeconds = a.file.duration
+        let durationInSeconds = a.file.duration ?? 0
         let minutes = Math.floor(durationInSeconds / 60);
         let seconds = Math.floor(durationInSeconds % 60);
         let formattedDuration = `${minutes}分${seconds}秒`;
         let subtitle = `${author} | ${formattedDuration}`;
-        if(durationInSeconds === null) {
+        if(durationInSeconds === 0) {
             subtitle = author
         }
         let cover = `${this.baseImgUrl}original/${a.file.id}/thumbnail-01.jpg`
