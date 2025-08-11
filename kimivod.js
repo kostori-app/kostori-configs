@@ -5,7 +5,7 @@ class Kimivod extends AnimeSource {
 
     key = "kimivod"
 
-    version = "1.0.1"
+    version = "1.0.2"
 
     minAppVersion = "1.0.0"
 
@@ -185,7 +185,7 @@ class Kimivod extends AnimeSource {
     ]
 
     search = {
-        load:async (keyword, page) => {
+        load:async (keyword,searchOption,page) => {
             let url = `https://cn.kimivod.com/search.php?page=${page}&searchword=${keyword}`
             let res = await Network.get(url, this.headers)
             if(res.status !== 200) {

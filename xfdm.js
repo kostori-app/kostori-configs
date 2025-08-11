@@ -4,7 +4,7 @@ class Xfdm extends AnimeSource{
 
     key = "xfdm"
 
-    version = "1.0.4"
+    version = "1.0.5"
 
     minAppVersion = "1.0.0"
 
@@ -165,7 +165,7 @@ class Xfdm extends AnimeSource{
     ]
 
     search = {
-        load:async (keyword, page) => {
+        load:async (keyword,searchOption,page) => {
             let url = `https://dm1.xfdm.pro/search/wd/${keyword}/page/${page}.html`
             let res = await Network.get(url, this.headers,)
             if(res.status !== 200) {

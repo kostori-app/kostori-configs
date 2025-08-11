@@ -127,7 +127,7 @@ class Mxdm extends AnimeSource{
     ]
 
     search = {
-        load:async (keyword, page) => {
+        load:async (keyword,searchOption,page) => {
             let url = `${this.baseUrl}search/${keyword}----------${page}---.html`
             let res = await Network.get(url, {})
             if(res.status !== 200) {

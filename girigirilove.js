@@ -4,7 +4,7 @@ class Girigirilove extends AnimeSource{
 
     key = "girigirilove"
 
-    version = "1.1.0"
+    version = "1.1.1"
 
     minAppVersion = "1.0.0"
 
@@ -116,7 +116,7 @@ class Girigirilove extends AnimeSource{
     ]
 
     search = {
-        load:async (keyword, page) => {
+        load:async (keyword,searchOption,page) => {
             let url = `${this.baseUrl}/search/${keyword}----------${page}---/`
             let res = await Network.get(url, {"User-Agent": this.userAgent})
             if(res.status !== 200) {

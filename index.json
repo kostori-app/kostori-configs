@@ -3,7 +3,7 @@
         "name": "girigirilove",
         "fileName": "girigirilove.js",
         "key": "girigirilove",
-        "version": "1.1.0"
+        "version": "1.1.1"
     },
     {
         "name": "mxdm",
@@ -15,7 +15,7 @@
         "name": "xfdm",
         "fileName": "xfdm.js",
         "key": "xfdm",
-        "version": "1.0.4"
+        "version": "1.0.5"
     },
     {
         "name": "xgkt",
@@ -27,7 +27,7 @@
         "name": "kimivod",
         "fileName": "kimivod.js",
         "key": "kimivod",
-        "version": "1.0.1"
+        "version": "1.0.2"
     },{
         "name": "emby",
         "fileName": "emby.js",
@@ -37,6 +37,6 @@
         "name": "iwara",
         "fileName": "iwara.js",
         "key": "iwara",
-        "version": "1.0.3"
+        "version": "1.0.4"
     }
 ]

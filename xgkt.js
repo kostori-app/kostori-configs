@@ -113,7 +113,7 @@ class Xgkt extends AnimeSource {
     ]
 
     search = {
-        load: async (keyword, options, page) => {
+        load: async (keyword,searchOption,page) => {
             let url = `${this.baseUrl}search?q=${keyword}`
             let res = await Network.get(url, this.headers,)
             if(res.status !== 200) {

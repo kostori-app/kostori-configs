@@ -5,7 +5,7 @@ class Iwara extends AnimeSource {
 
     key = "iwara"
 
-    version = "1.0.3"
+    version = "1.0.4"
 
     minAppVersion = "1.0.0"
 
@@ -39,7 +39,7 @@ class Iwara extends AnimeSource {
         let id = a.id;
         let title = a.title;
         let author = a.user.name;
-        let durationInSeconds = a.file.duration ?? 0
+        let durationInSeconds = a.file?.duration ?? 0
         let minutes = Math.floor(durationInSeconds / 60);
         let seconds = Math.floor(durationInSeconds % 60);
         let formattedDuration = `${minutes}分${seconds}秒`;
@@ -47,7 +47,7 @@ class Iwara extends AnimeSource {
         if(durationInSeconds === 0) {
             subtitle = author
         }
-        let cover = `${this.baseImgUrl}original/${a.file.id}/thumbnail-01.jpg`
+        let cover = `${this.baseImgUrl}original/${a.file?.id}/thumbnail-01.jpg`
         let tags = a.tags.map(a => a.id)
 
         return new Anime({
@@ -175,7 +175,7 @@ class Iwara extends AnimeSource {
     ]
 
     search = {
-        load:async (keyword, page) => {
+        load:async (keyword,searchOption,page) => {
             let startIndex = page - 1;
             let url = `${this.baseUrl}search?query=${keyword}&page=${startIndex}&limit=40&type=video&rating=${this.rating}`
             let res = await Network.get(url, this.headers)

@@ -16,16 +16,41 @@ class NewAnimeSource extends AnimeSource {
     }
 
     explore = [
+        {
+            title: "",
 
+            type: "mixed",
+
+            load: async (page) => {
+
+                return {
+                    data: animeList,
+                    maxPage: maxPage
+                }  // 返回包含所有动漫信息的数组
+            }
+        },
     ]
 
     search = {
+        load:async (keyword,searchOption,page) => {
+
+            return {
+                animes: animes,
+                maxPage: maxPage
+            }
+        }
     }
 
     anime = {
-        loadInfo: async (id) => {},
-        loadEp: async (animeId, epId) => {},
-        onClickTag: (namespace, tag) => {},
+        loadInfo: async (id) => {
+
+        },
+        loadEp: async (animeId, epId) => {
+            return epId
+        },
+        onClickTag: (namespace, tag) => {
+
+        },
     }
 
     settings = {
