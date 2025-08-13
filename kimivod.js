@@ -5,7 +5,7 @@ class Kimivod extends AnimeSource {
 
     key = "kimivod"
 
-    version = "1.0.2"
+    version = "1.0.3"
 
     minAppVersion = "1.0.0"
 
@@ -254,40 +254,7 @@ class Kimivod extends AnimeSource {
             let updateInfo = extractInfoByPrefix(document, '更新:');
             let imageElement = document.querySelector('img[itemprop="image"]');
             let imageUrl = imageElement?.attributes['data-src']?.trim() ?? '';
-            let episodeLinks = document.querySelectorAll('.playno a');
-            let episodeMap = new Map();
-
-            let tempList = [];
-
-            for (let linkElement of episodeLinks) {
-                let link = linkElement.attributes['href']?.trim() ?? '';
-                let title = linkElement.text.trim();
-
-                if (!/^\d+$/.test(title)) continue;
-
-                let episodeNumber = parseInt(title, 10);
-                if (isNaN(episodeNumber)) continue;
-
-                tempList.push({
-                    number: episodeNumber,
-                    link,
-                    title: `第${title}話`,
-                });
-            }
-
-            tempList.sort((a, b) => a.number - b.number);
-
-            for (let item of tempList) {
-                episodeMap.set(item.link, item.title);
-            }
-
-            if (episodeMap.size === 0) {
-                episodeMap.set('#', '暂无剧集');
-            }
-
-            let eps = {
-                "线上看": episodeMap,
-            };
+            let eps = parseEps(document)
 
             let animes = animeDivs.map(a => {
                 try {
@@ -350,3 +317,78 @@ function extractInfoByPrefix(document, prefix) {
     }
     return [];
 }
+
+function parseEps(document) {
+    let eps = {};
+
+    let tabElements = document.querySelectorAll('.tabs a');
+    let hasTabs = tabElements.length > 0;
+
+    function collectEpisodes(rootElement, tabTitle) {
+        let episodeLinks = rootElement.querySelectorAll('.playno a');
+        let tempList = [];
+
+        for (let a of episodeLinks) {
+            let linkText = a.text.trim();
+            if (/午夜|5ewiki/i.test(linkText)) continue;
+
+            let href = a.attributes['href']?.trim() ?? '';
+            if (!href) continue;
+
+            // 尝试提取数字
+            let numMatch = linkText.match(/(\d{1,4})/);
+            let number = numMatch ? parseInt(numMatch[1], 10) : null;
+
+            tempList.push({
+                number,
+                link: href,
+                title: number ? `第${number}集` : linkText, // 没数字就用原文
+            });
+        }
+
+        // 如果有数字就按数字排序，没有数字的保持原顺序
+        tempList.sort((a, b) => {
+            if (a.number != null && b.number != null) {
+                return a.number - b.number;
+            }
+            if (a.number != null) return -1;
+            if (b.number != null) return 1;
+            return 0;
+        });
+
+        let episodeMap = new Map();
+        for (let item of tempList) {
+            if (!episodeMap.has(item.link)) {
+                episodeMap.set(item.link, item.title);
+            }
+        }
+
+        if (episodeMap.size === 0) {
+            episodeMap.set('#', '暂无剧集');
+        }
+
+        eps[tabTitle] = episodeMap;
+    }
+
+    if (hasTabs) {
+        for (let tab of tabElements) {
+            let dataUi = tab.attributes['data-ui']?.trim() ?? '';
+            if (!dataUi || !dataUi.startsWith('#')) continue;
+
+            let tabTitle = tab.querySelector('span.max')?.text.trim() ?? '';
+            if (tabTitle.length === 0) tabTitle = '播放列表';
+
+            let pageId = dataUi.slice(1);
+            let pageElement = document.getElementById(pageId);
+            if (!pageElement) continue;
+
+            collectEpisodes(pageElement, tabTitle);
+        }
+    } else {
+        collectEpisodes(document, '播放列表');
+    }
+
+    return eps;
+}
+
+
