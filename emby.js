@@ -5,7 +5,7 @@ class Emby extends AnimeSource {
 
     key = "emby"
 
-    version = "1.0.2"
+    version = "1.0.3"
 
     minAppVersion = "1.0.0"
 
@@ -130,7 +130,7 @@ class Emby extends AnimeSource {
             let parts = param.split("-");
             let id = parts[0];
             let type = parts[1];
-            let startIndex = (page - 1) * 20;
+            let startIndex = (page - 1) * 100;
             let res = await Network.get(`${this.protocol}${this.address}:${this.port}/Items?ParentId=${id}&SortBy=${options[0]}&SortOrder=Descending&Limit=100&StartIndex=${startIndex}&api_key=${this.apiKey}&UserId=${this.userId}&IncludeItemTypes=${type}&Recursive=true`, {})
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`

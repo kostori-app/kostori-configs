@@ -943,6 +943,8 @@ function Comment({userName, avatar, content, time, replyCount, id, isLiked, scor
 class AnimeSource {
     name = ""
 
+    isBangumi = false
+
     key = ""
 
     version = ""

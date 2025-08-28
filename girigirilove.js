@@ -2,9 +2,11 @@
 class Girigirilove extends AnimeSource{
     name = "girigirilove"
 
+    isBangumi = true
+
     key = "girigirilove"
 
-    version = "1.1.1"
+    version = "1.1.2"
 
     minAppVersion = "1.0.0"
 

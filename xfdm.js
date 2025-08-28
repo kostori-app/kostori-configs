@@ -2,9 +2,11 @@
 class Xfdm extends AnimeSource{
     name = "xfdm"
 
+    isBangumi = true
+
     key = "xfdm"
 
-    version = "1.0.5"
+    version = "1.0.6"
 
     minAppVersion = "1.0.0"
 

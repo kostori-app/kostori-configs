@@ -3,9 +3,11 @@ class Kimivod extends AnimeSource {
 
     name = "kimivod"
 
+    isBangumi = true
+
     key = "kimivod"
 
-    version = "1.0.3"
+    version = "1.0.4"
 
     minAppVersion = "1.0.0"
 

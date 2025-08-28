@@ -2,11 +2,13 @@
 class Mxdm extends AnimeSource{
     name = 'mxdm'
 
+    isBangumi = true
+
     key = 'mxdm'
 
-    version = '1.0.2'
+    version = '1.0.3'
 
-    minAppVersion = '1.2.1'
+    minAppVersion = '1.2.2'
 
     url = "https://raw.githubusercontent.com/kostori-app/kostori-configs/master/mxdm.js"
 

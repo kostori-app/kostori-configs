@@ -3,9 +3,11 @@ class Xgkt extends AnimeSource {
 
     name = "xgkt"
 
+    isBangumi = true
+
     key = "xgkt"
 
-    version = "1.0.2"
+    version = "1.0.3"
 
     minAppVersion = "1.0.0"
 
