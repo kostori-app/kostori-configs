@@ -5,7 +5,7 @@ class Emby extends AnimeSource {
 
     key = "emby"
 
-    version = "1.0.3"
+    version = "1.0.4"
 
     minAppVersion = "1.0.0"
 
@@ -27,20 +27,20 @@ class Emby extends AnimeSource {
     }
 
     get userId(){
-        return this.loadSetting('userId');
+        return this.loadData('userId');
     }
 
     get apiKey(){
-        return this.loadSetting('api_key');
+        return this.loadData('token');
     }
 
     parseQuery(parentId, type) {
-        return `ParentId=${parentId}&SortBy=DateCreated&SortOrder=Descending&Limit=20&StartIndex=0&api_key=${this.apiKey}&UserId=${this.userId}&IncludeItemTypes=${type}&Recursive=true`;
+        return `ParentId=${parentId}&SortBy=DateLastContentAdded&SortOrder=Descending&Limit=40&StartIndex=0&IncludeItemTypes=${type}&Recursive=true&UserId=${this.userId}`;
     }
 
     async fetchItemsByType(id, type) {
-        let url = `${this.protocol}${this.address}:${this.port}/Items?${this.parseQuery(id, type)}`;
-        let itemRes = await Network.get(url, {});
+        let url = `${this.baseUrl}/Items?${this.parseQuery(id, type)}`;
+        let itemRes = await Network.get(url, this.headers);
         if (itemRes.status !== 200) {
             throw `Invalid Status Code ${itemRes.status}`;
         }
@@ -49,8 +49,8 @@ class Emby extends AnimeSource {
             let id = a.Id;
             let name = a.Name;
             let cover = a.ImageTags.Primary != null
-                ? `${this.protocol}${this.address}:${this.port}/Items/${id}/Images/Primary?tag=${a.ImageTags.Primary}&api_key=${this.apiKey}`
-                : `${this.protocol}${this.address}:${this.port}/Users/${this.userId}/Images/Primary?api_key=${this.apiKey}`
+                ? `${this.baseUrl}/Items/${id}/Images/Primary?tag=${a.ImageTags.Primary}`
+                : `${this.baseUrl}/Users/${this.userId}/Images/Primary`
             return new Anime({
                 id: id,
                 title: name,
@@ -63,7 +63,7 @@ class Emby extends AnimeSource {
     }
 
     async recursiveFetch(folderId) {
-        let epsRes = await Network.get(`${this.protocol}${this.address}:${this.port}/Items?ParentId=${folderId}&IncludeItemTypes=Movie,Series,Folder&UserId=${this.userId}&api_key=${this.apiKey}&SortOrder=Descending&SortBy=DateCreated&Recursive=false`, {});
+        let epsRes = await Network.get(`${this.baseUrl}/Items?ParentId=${folderId}&IncludeItemTypes=Movie,Series,Folder&SortOrder=Descending&SortBy=DateLastContentAdded&Recursive=false&UserId=${this.userId}`, this.headers);
         if (epsRes.status !== 200) {
             throw `Invalid Status Code ${epsRes.status}`;
         }
@@ -74,11 +74,70 @@ class Emby extends AnimeSource {
             if (a.Type === "Folder") {
                 await this.recursiveFetch(a.Id);  // 递归访问子Folder
             } else {
-                let link = `${this.protocol}${this.address}:${this.port}/Videos/${a.Id}/stream.mp4?api_key=${this.apiKey}&UserId=${this.userId}`;
+                let link = `${this.baseUrl}/Videos/${a.Id}/stream.mp4?api_key=${this.apiKey}&UserId=${this.userId}`;
                 let title = a.Name || `第${ep.size + 1}话`;
                 ep.set(link, title);
             }
         }
+    }
+
+    get baseUrl() {
+        return `${this.protocol}${this.address}:${this.port}`
+    }
+
+    get loginHeaders() {
+        return {
+            'X-Emby-Authorization': `MediaBrowser Client="Kostori", Device="Kostori", DeviceId="1145141919810", Version=${this.version},`
+        }
+    }
+
+    get headers() {
+        return {
+            'X-Emby-Token': this.loadData('token'),
+            'X-Emby-Authorization': this.loadData('token')
+        }
+    }
+
+    account = {
+        reLogin: async () => {
+            if(!this.isLogged) {
+                throw new Error('Not logged in');
+            }
+            let account = this.loadData('account')
+            if(!Array.isArray(account)) {
+                throw new Error('Failed to reLogin: Invalid account data');
+            }
+            let username = account[0]
+            let password = account[1]
+            return await this.account.login(username, password)
+        },
+        login: async (account, pwd) => {
+            let res = await Network.post(
+                `${this.baseUrl}/Users/AuthenticateByName`,
+                this.loginHeaders,
+                {
+                    "Username": account,
+                    "Pw": pwd
+                })
+
+            if (res.status === 200) {
+                let json = JSON.parse(res.body)
+                if (!json.AccessToken) {
+                    throw 'Failed to get token\nResponse: ' + res.body
+                }
+                this.saveData('token', json.AccessToken)
+                this.saveData('userId', json.User.Id)
+                return 'ok'
+            }
+
+            throw 'Failed to login'
+        },
+
+        logout: () => {
+            this.deleteData('token')
+        },
+
+        registerWebsite: ""
     }
 
 
@@ -87,7 +146,7 @@ class Emby extends AnimeSource {
             title: "emby",
             type: "multiPartPage",
             load: async () => {
-                let res = await Network.get(`${this.protocol}${this.address}:${this.port}/Library/MediaFolders?api_key=${this.apiKey}`, {},)
+                let res = await Network.get(`${this.baseUrl}/Library/MediaFolders`, this.headers,)
                 if (res.status !== 200) {
                     throw `Invalid Status Code ${res.status}`
                 }
@@ -131,7 +190,7 @@ class Emby extends AnimeSource {
             let id = parts[0];
             let type = parts[1];
             let startIndex = (page - 1) * 100;
-            let res = await Network.get(`${this.protocol}${this.address}:${this.port}/Items?ParentId=${id}&SortBy=${options[0]}&SortOrder=Descending&Limit=100&StartIndex=${startIndex}&api_key=${this.apiKey}&UserId=${this.userId}&IncludeItemTypes=${type}&Recursive=true`, {})
+            let res = await Network.get(`${this.baseUrl}/Items?ParentId=${id}&SortBy=${options[0]}&SortOrder=${options[1]}&Limit=100&StartIndex=${startIndex}&IncludeItemTypes=${type}&Recursive=true&UserId=${this.userId}`, this.headers)
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
             }
@@ -141,8 +200,8 @@ class Emby extends AnimeSource {
                 let id = a.Id;
                 let name = a.Name;
                 let cover = a.ImageTags.Primary != null
-                    ? `${this.protocol}${this.address}:${this.port}/Items/${id}/Images/Primary?tag=${a.ImageTags.Primary}&api_key=${this.apiKey}`
-                    : `${this.protocol}${this.address}:${this.port}/Users/${this.userId}/Images/Primary?api_key=${this.apiKey}`
+                    ? `${this.baseUrl}/Items/${id}/Images/Primary?tag=${a.ImageTags.Primary}`
+                    : `${this.baseUrl}/Users/${this.userId}/Images/Primary`
                 return new Anime({
                     id: id,
                     title: name,
@@ -162,17 +221,36 @@ class Emby extends AnimeSource {
                 maxPage: pageCount
             }
         },
-        // provide options for category comic loading
+
         optionList: [
             {
-                // For a single option, use `-` to separate the value and text, left for value, right for text
+                label: "排序",
                 options: [
+                    "DateLastContentAdded-更新日期",
                     "DateCreated-创建日期",
-                    "DatePlayed-加入日期",
+                    "DateLastActivity-最后活动日期",
+                    "DatePlayed-最后播放日期",
                     "Name-标题",
+                    "SortName-规范化标题",
+                    "PremiereDate-首映日期",
+                    "EndDate-完结日期",
                     "ProductionYear-年份",
                     "RunTimeTicks-播放时长",
+                    "CommunityRating-社区评分",
+                    "CriticRating-媒体评分",
+                    "OfficialRating-官方评分",
+                    "PlayCount-播放次数",
+                    "IndexNumber-集数排序",
+                    "ParentIndexNumber-季号排序",
+                    "IsUnplayed-是否未播放",
+                    "IsPlayed-是否播放",
                     "Random-随机"
+                ]
+            },
+            {
+                options: [
+                    "Descending-倒序",
+                    "Ascending-正序",
                 ]
             }
         ],
@@ -180,7 +258,7 @@ class Emby extends AnimeSource {
 
     search = {
         load:async (keyword) => {
-            let res = await Network.get(`${this.protocol}${this.address}:${this.port}/Items?SearchTerm=${keyword}&IncludeItemTypes=Movie,Series&api_key=${this.apiKey}&UserId=${this.userId}&SortBy=DateCreated&SortOrder=Descending&Recursive=true`, {},)
+            let res = await Network.get(`${this.baseUrl}/Items?SearchTerm=${keyword}&IncludeItemTypes=Movie,Series&SortBy=DateLastContentAdded&SortOrder=Descending&Recursive=true&UserId=${this.userId}`, this.headers,)
             if (res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
             }
@@ -189,8 +267,8 @@ class Emby extends AnimeSource {
                 let id = a.Id;
                 let name = a.Name;
                 let cover = a.ImageTags.Primary != null
-                    ? `${this.protocol}${this.address}:${this.port}/Items/${id}/Images/Primary?tag=${a.ImageTags.Primary}&api_key=${this.apiKey}`
-                    : `${this.protocol}${this.address}:${this.port}/Users/${this.userId}/Images/Primary?api_key=${this.apiKey}`
+                    ? `${this.baseUrl}/Items/${id}/Images/Primary?tag=${a.ImageTags.Primary}`
+                    : `${this.baseUrl}/Users/${this.userId}/Images/Primary`
                 return new Anime({
                     id: id,
                     title: name,
@@ -209,22 +287,23 @@ class Emby extends AnimeSource {
 
     anime = {
         loadInfo: async (id) => {
-            let res = await Network.get(`${this.protocol}${this.address}:${this.port}/Users/${this.userId}/Items/${id}?api_key=${this.apiKey}`,{})
+            let res = await Network.get(`${this.baseUrl}/Users/${this.userId}/Items/${id}?&UserId=${this.userId}`,this.headers)
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
             }
             let json = JSON.parse(res.body)
             let title = json.Name
             let cover = json.ImageTags.Primary != null
-                ? `${this.protocol}${this.address}:${this.port}/Items/${id}/Images/Primary?tag=${json.ImageTags.Primary}&api_key=${this.apiKey}`
-                : `${this.protocol}${this.address}:${this.port}/Users/${this.userId}/Images/Primary?api_key=${this.apiKey}`
+                ? `${this.baseUrl}/Items/${id}/Images/Primary?tag=${json.ImageTags.Primary}`
+                : `${this.baseUrl}/Users/${this.userId}/Images/Primary`
             let description = json.Overview
-            let broadcastDate = [`${json.ProductionYear}`]
+            let broadcastDate = [];
+            broadcastDate.push(json.ProductionYear);
             let actors = json.People.map(a => a.Name)
             let tags = json.TagItems.map(t => t.Name);
             let ep = new Map()
             if(json.Type === "Series"){
-                let epsRes = await Network.get(`${this.protocol}${this.address}:${this.port}/Shows/${id}/Episodes?api_key=${this.apiKey}&UserId=${this.userId}`,{})
+                let epsRes = await Network.get(`${this.baseUrl}/Shows/${id}/Episodes?&UserId=${this.userId}`,this.headers)
                 if(epsRes.status !== 200) {
                     throw `Invalid Status Code ${epsRes.status}`
                 }
@@ -233,25 +312,25 @@ class Emby extends AnimeSource {
 
                 for(let a of epsItems) {
                     let title = a.Name
-                    let link = `${this.protocol}${this.address}:${this.port}/Videos/${a.Id}/stream.mp4?api_key=${this.apiKey}&UserId=${this.userId}`
+                    let link = `${this.baseUrl}/Videos/${a.Id}/stream?api_key=${this.apiKey}&UserId=${this.userId}&static=true`
                     if (title.length === 0) {
                         title = `第${ep.size + 1}話`;
                     }
                     ep.set(link, title);
                 }
             } else if(json.Type === "Movie"){
-                let link = `${this.protocol}${this.address}:${this.port}/Videos/${json.Id}/stream.mp4?api_key=${this.apiKey}&UserId=${this.userId}`
+                let link = `${this.baseUrl}/Videos/${json.Id}/stream?api_key=${this.apiKey}&UserId=${this.userId}&static=true`
                 let title = json.Name
                 ep.set(link, title);
             }else if(json.Type === "BoxSet"){
-                let epsRes = await Network.get(`${this.protocol}${this.address}:${this.port}/Items?ParentId=${id}&IncludeItemTypes=Movie,Series,&UserId=${this.userId}&api_key=${this.apiKey}&SortOrder=Descending&SortBy=DateCreated&Recursive=true`,{})
+                let epsRes = await Network.get(`${this.baseUrl}/Items?ParentId=${id}&IncludeItemTypes=Movie,Series,SortOrder=Descending&SortBy=DateLastContentAdded&Recursive=true&UserId=${this.userId}`,this.headers)
                 if(epsRes.status !== 200) {
                     throw `Invalid Status Code ${epsRes.status}`
                 }
                 let epsJson = JSON.parse(epsRes.body)
                 let epsItems = epsJson.Items
                 for (let a of epsItems) {
-                    let link = `${this.protocol}${this.address}:${this.port}/Videos/${a.Id}/stream.mp4?api_key=${this.apiKey}&UserId=${this.userId}`
+                    let link = `${this.baseUrl}/Videos/${a.Id}/stream?api_key=${this.apiKey}&UserId=${this.userId}&static=true`
                     let title = a.Name
                     if (title.length === 0) {
                         title = `第${ep.size + 1}話`;
@@ -259,14 +338,14 @@ class Emby extends AnimeSource {
                     ep.set(link, title);
                 }
             }else if(json.Type === "Folder"){
-                let epsRes = await Network.get(`${this.protocol}${this.address}:${this.port}/Items?ParentId=${id}&IncludeItemTypes=Movie&UserId=${this.userId}&api_key=${this.apiKey}&SortOrder=Descending&SortBy=DateCreated&Recursive=true`,{})
+                let epsRes = await Network.get(`${this.baseUrl}/Items?ParentId=${id}&IncludeItemTypes=Movie&SortOrder=Descending&SortBy=DateLastContentAdded&Recursive=true&UserId=${this.userId}`,this.headers)
                 if(epsRes.status !== 200) {
                     throw `Invalid Status Code ${epsRes.status}`
                 }
                 let epsJson = JSON.parse(epsRes.body)
                 let epsItems = epsJson.Items
                 for (let a of epsItems) {
-                    let link = `${this.protocol}${this.address}:${this.port}/Videos/${a.Id}/stream.mp4?api_key=${this.apiKey}&UserId=${this.userId}`
+                    let link = `${this.baseUrl}/Videos/${a.Id}/stream?api_key=${this.apiKey}&UserId=${this.userId}&static=true`
                     let title = a.Name
                     if (title.length === 0) {
                         title = `第${ep.size + 1}話`;
@@ -274,14 +353,14 @@ class Emby extends AnimeSource {
                     ep.set(link, title);
                 }
             }else if(json.Type === "Playlist"){
-                let epsRes = await Network.get(`${this.protocol}${this.address}:${this.port}/Playlists/${id}/Items?UserId=${this.userId}&api_key=${this.apiKey}&SortOrder=Descending&SortBy=DateCreated`,{})
+                let epsRes = await Network.get(`${this.baseUrl}/Playlists/${id}/Items?SortOrder=Descending&SortBy=DateLastContentAdded&UserId=${this.userId}`,this.headers)
                 if(epsRes.status !== 200) {
                     throw `Invalid Status Code ${epsRes.status}`
                 }
                 let epsJson = JSON.parse(epsRes.body)
                 let epsItems = epsJson.Items
                 for (let a of epsItems) {
-                    let link = `${this.protocol}${this.address}:${this.port}/Videos/${a.Id}/stream.mp4?api_key=${this.apiKey}&UserId=${this.userId}`
+                    let link = `${this.baseUrl}/Videos/${a.Id}/stream?api_key=${this.apiKey}&UserId=${this.userId}&static=true`
                     let title = a.Name
                     if (title.length === 0) {
                         title = `第${ep.size + 1}話`;
@@ -289,7 +368,7 @@ class Emby extends AnimeSource {
                     ep.set(link, title);
                 }
             }else{
-                let link = `${this.protocol}${this.address}:${this.port}/Videos/${json.Id}/stream.mp4?api_key=${this.apiKey}&UserId=${this.userId}`
+                let link = `${this.baseUrl}/Videos/${json.Id}/stream?api_key=${this.apiKey}&UserId=${this.userId}&static=true`
                 let title = json.Name
                 ep.set(link, title);
             }
@@ -301,7 +380,7 @@ class Emby extends AnimeSource {
                 "emby": ep,
             }
 
-            let animesRes = await Network.get(`${this.protocol}${this.address}:${this.port}/Items/${id}/Similar?api_key=${this.apiKey}&UserId=${this.userId}&Limit=60`,{})
+            let animesRes = await Network.get(`${this.baseUrl}/Items/${id}/Similar?Limit=60&UserId=${this.userId}`,this.headers)
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
             }
@@ -311,8 +390,8 @@ class Emby extends AnimeSource {
                 let id = a.Id;
                 let name = a.Name;
                 let cover = a.ImageTags.Primary != null
-                    ? `${this.protocol}${this.address}:${this.port}/Items/${id}/Images/Primary?tag=${a.ImageTags.Primary}&api_key=${this.apiKey}`
-                    : `${this.protocol}${this.address}:${this.port}/Users/${this.userId}/Images/Primary?api_key=${this.apiKey}`
+                    ? `${this.baseUrl}/Items/${id}/Images/Primary?tag=${a.ImageTags.Primary}`
+                    : `${this.baseUrl}/Users/${this.userId}/Images/Primary`
                 return new Anime({
                     id: id,
                     title: name,
@@ -334,7 +413,7 @@ class Emby extends AnimeSource {
                 },
                 episode: eps,
                 recommend: animes,
-                url: `${this.protocol}${this.address}:${this.port}/web/index.html#!/item?id=${id}&serverId=${json.ServerId}`,
+                url: `${this.baseUrl}/web/index.html#!/item?id=${id}&serverId=${json.ServerId}`,
             })
         },
         loadEp: async (animeId, epId) => {
@@ -373,18 +452,6 @@ class Emby extends AnimeSource {
             type: "input",
             validator: '^\\d{1,5}$',
             default: '8096',
-        },
-        userId: {
-            title: "UserId",
-            type: "input",
-            validator: '^[a-zA-Z0-9]+$',
-            default: '',
-        },
-        api_key: {
-            title: "Api_key",
-            type: "input",
-            validator: '^[a-zA-Z0-9]+$',
-            default: '',
         },
     }
 
