@@ -1,4 +1,4 @@
-/** @type {import('./_kostori_.js')} */
+/** @type {import('./_kostori_.js')} **/
 class Girigirilove extends AnimeSource{
     name = "girigirilove"
 
@@ -6,14 +6,14 @@ class Girigirilove extends AnimeSource{
 
     key = "girigirilove"
 
-    version = "1.1.2"
+    version = "1.1.3"
 
     minAppVersion = "1.0.0"
 
     url = "https://raw.githubusercontent.com/kostori-app/kostori-configs/master/girigirilove.js"
 
     get baseUrl() {
-        return `https://anime.girigirilove.com`
+        return `https://bgm.girigirilove.com`
     }
 
     get userAgent(){
@@ -55,7 +55,7 @@ class Girigirilove extends AnimeSource{
         type: "mixed",
 
         load: async (page) => {
-            let res = await Network.get(`https://anime.girigirilove.com/show/2--------${page}---/`,{"User-Agent": this.userAgent})
+            let res = await Network.get(`${this.baseUrl}/show/2--------${page}---/`,{"User-Agent": this.userAgent})
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
             }
@@ -77,7 +77,7 @@ class Girigirilove extends AnimeSource{
             type: "mixed",
 
             load: async (page) => {
-                let res = await Network.get(`https://anime.girigirilove.com/show/3--------${page}---/`,{"User-Agent": this.userAgent})
+                let res = await Network.get(`${this.baseUrl}/show/3--------${page}---/`,{"User-Agent": this.userAgent})
                 if(res.status !== 200) {
                     throw `Invalid Status Code ${res.status}`
                 }
@@ -99,7 +99,7 @@ class Girigirilove extends AnimeSource{
             type: "mixed",
 
             load: async (page) => {
-                let res = await Network.get(`https://anime.girigirilove.com/show/21--------${page}---/`,{"User-Agent": this.userAgent})
+                let res = await Network.get(`${this.baseUrl}/show/21--------${page}---/`,{"User-Agent": this.userAgent})
                 if(res.status !== 200) {
                     throw `Invalid Status Code ${res.status}`
                 }
@@ -116,6 +116,73 @@ class Girigirilove extends AnimeSource{
             }
         }
     ]
+
+   static category_param = {
+        "喜剧": "/show/2---%E5%96%9C%E5%89%A7--------/",
+       "爱情": "/show/2---%E7%88%B1%E6%83%85--------/",
+       "恐怖": "/show/2---%E6%81%90%E6%80%96--------/",
+       "动作": "/show/2---%E5%8A%A8%E4%BD%9C--------/",
+       "科幻": "/show/2---%E7%A7%91%E5%B9%BB--------/",
+       "剧情": "/show/2---%E5%89%A7%E6%83%85--------/",
+       "战争": "/show/2---%E6%88%98%E4%BA%89--------/",
+       "奇幻": "/show/2---%E5%A5%87%E5%B9%BB--------/",
+       "冒险": "/show/2---%E5%86%92%E9%99%A9--------/",
+       "悬疑": "/show/2---%E6%82%AC%E7%96%91--------/",
+       "校园": "/show/2---%E6%A0%A1%E5%9B%AD--------/",
+       "后宫": "/show/2---%E5%90%8E%E5%AE%AB--------/",
+       "热血": "/show/2---%E7%83%AD%E8%A1%80--------/",
+       "运动": "/show/2---%E8%BF%90%E5%8A%A8--------/",
+       "职场": "/show/2---%E8%81%8C%E5%9C%BA--------/",
+       "百合": "/show/2---%E7%99%BE%E5%90%88--------/",
+       "乙女": "/show/2---%E4%B9%99%E5%A5%B3--------/",
+       "机甲": "/show/2---%E6%9C%BA%E7%94%B2--------/",
+       "日常": "/show/2---%E6%97%A5%E5%B8%B8--------/",
+       "魔法少女": "/show/2---%E9%AD%94%E6%B3%95%E5%B0%91%E5%A5%B3--------/",
+       "异世界": "/show/2---%E5%BC%82%E4%B8%96%E7%95%8C--------/",
+       "爱抖露": "/show/2---%E7%88%B1%E6%8A%96%E9%9C%B2--------/",
+       "音乐": "/show/2---%E9%9F%B3%E4%B9%90--------/",
+       "萌": "/show/2---%E8%90%8C--------/"}
+
+    category = {
+        title: "Girigirilove",
+        parts: [
+            {
+                name: "类型",
+                type: 'fixed',
+                categories: Object.keys(Girigirilove.category_param),
+                categoryParams: Object.values(Girigirilove.category_param),
+                itemType: "category"
+            }
+        ]
+    }
+
+    categoryAnimes = {
+        load: async (category, param, options, page) => {
+            const injectPage = (param, page) => {
+                const parts = param.split("-");
+                const index = parts.length - 4;
+                if (index >= 0) {
+                    parts[index] = page;
+                }
+                return parts.join("-");
+            };
+            let res = await Network.get(`${this.baseUrl}${injectPage(param, page)}`, {"User-Agent": this.userAgent})
+            if(res.status !== 200) {
+                throw `Invalid Status Code ${res.status}`
+            }
+            let document = new HtmlDocument(res.body)
+            let animeDivs = document.querySelectorAll('div.public-list-box')
+            let animes = animeDivs.map(a => this.parseAnime(a))
+            document.dispose()
+            return {
+                animes: animes,
+                maxPage: null
+            }
+        },
+        optionList: [
+        ]
+
+    }
 
     search = {
         load:async (keyword,searchOption,page) => {
