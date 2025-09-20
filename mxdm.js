@@ -33,7 +33,7 @@ class Mxdm extends AnimeSource{
         let cover = image.startsWith('http') ? image : `${this.baseUrl}${image}`;
         let info = infolink?.text.trim() ?? '';
         let subName = subNamelink?.text.trim() ?? '';
-        let categoryList = spanPrt.map(e => e.text.trim()).filter(Boolean);
+        let categoryList = spanPrt.map(e => e.text.trim()).filter(anime => anime !== null);
 
         return new Anime({
             id: id,

@@ -5,7 +5,7 @@ class Emby extends AnimeSource {
 
     key = "emby"
 
-    version = "1.0.4"
+    version = "1.0.5"
 
     minAppVersion = "1.0.0"
 
@@ -298,7 +298,10 @@ class Emby extends AnimeSource {
                 : `${this.baseUrl}/Users/${this.userId}/Images/Primary`
             let description = json.Overview
             let broadcastDate = [];
-            broadcastDate.push(json.ProductionYear);
+            if(json.ProductionYear != null){
+                broadcastDate.push(`${json.ProductionYear}`);
+            }
+
             let actors = json.People.map(a => a.Name)
             let tags = json.TagItems.map(t => t.Name);
             let ep = new Map()

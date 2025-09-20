@@ -32,7 +32,7 @@
         "name": "emby",
         "fileName": "emby.js",
         "key": "emby",
-        "version": "1.0.4"
+        "version": "1.0.5"
     },{
         "name": "iwara",
         "fileName": "iwara.js",

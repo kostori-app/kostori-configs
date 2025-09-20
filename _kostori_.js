@@ -4,6 +4,25 @@ Kostori JavaScript Library
 This library provides a set of APIs for interacting with the Kostori app.
 */
 
+/**
+ * @function sendMessage
+ * @global
+ * @param {Object} message
+ * @returns {any}
+ */
+
+/**
+ * Set a timeout to execute a callback function after a specified delay.
+ * @param callback {Function}
+ * @param delay {number} - delay in milliseconds
+ */
+function setTimeout(callback, delay) {
+    sendMessage({
+        method: 'delay',
+        time: delay,
+    }).then(callback);
+}
+
 /// encode, decode, hash, decrypt
 let Convert = {
     /**
@@ -293,7 +312,8 @@ function randomDouble(min, max) {
 class _Timer {
     delay = 0;
 
-    callback = () => { };
+    callback = () => {
+    };
 
     status = false;
 
@@ -487,6 +507,37 @@ let Network = {
 };
 
 /**
+ * [fetch] function for sending HTTP requests. Same api as the browser fetch.
+ * @param url {string}
+ * @param [options] {{method?: string, headers?: Object, body?: any}}
+ * @returns {Promise<{ok: boolean, status: number, statusText: string, headers: {}, arrayBuffer: (function(): Promise<ArrayBuffer>), text: (function(): Promise<string>), json: (function(): Promise<any>)}>}
+ * @since 1.2.0
+ */
+async function fetch(url, options) {
+    let method = 'GET';
+    let headers = {};
+    let data = null;
+
+    if (options) {
+        method = options.method || method;
+        headers = options.headers || headers;
+        data = options.body || data;
+    }
+
+    let result = await Network.fetchBytes(method, url, headers, data);
+
+    return {
+        ok: result.status >= 200 && result.status < 300,
+        status: result.status,
+        statusText: '',
+        headers: result.headers,
+        arrayBuffer: async () => result.body,
+        text: async () => Convert.decodeUtf8(result.body),
+        json: async () => JSON.parse(Convert.decodeUtf8(result.body)),
+    }
+}
+
+/**
  * HtmlDocument class for parsing HTML and querying elements.
  */
 class HtmlDocument {
@@ -521,7 +572,7 @@ class HtmlDocument {
             key: this.key,
             query: query
         })
-        if(k == null) return null;
+        if (k == null) return null;
         return new HtmlElement(k, this.key);
     }
 
@@ -564,7 +615,7 @@ class HtmlDocument {
             key: this.key,
             id: id
         })
-        if(k == null) return null;
+        if (k == null) return null;
         return new HtmlElement(k, this.key);
     }
 }
@@ -626,7 +677,7 @@ class HtmlElement {
             query: query,
             doc: this.doc,
         })
-        if(k == null) return null;
+        if (k == null) return null;
         return new HtmlElement(k, this.doc);
     }
 
@@ -698,7 +749,7 @@ class HtmlElement {
             key: this.key,
             doc: this.doc,
         })
-        if(k == null) return null;
+        if (k == null) return null;
         return new HtmlElement(k, this.doc);
     }
 
@@ -752,7 +803,7 @@ class HtmlElement {
             key: this.key,
             doc: this.doc,
         })
-        if(k == null) return null;
+        if (k == null) return null;
         return new HtmlElement(k, this.doc);
     }
 
@@ -819,7 +870,7 @@ class HtmlNode {
             key: this.key,
             doc: this.doc,
         })
-        if(k == null) return null;
+        if (k == null) return null;
         return new HtmlElement(k, this.doc);
     }
 }
@@ -850,6 +901,7 @@ let console = {
  * @param id {string}
  * @param title {string}
  * @param subtitle {string}
+ * @param subTitle {string} - equal to subtitle
  * @param cover {string}
  * @param tags {string[]}
  * @param description {string}
@@ -857,12 +909,27 @@ let console = {
  * @param language {string?}
  * @param favoriteId {string?} - Only set this field if the anime is from favorites page
  * @param stars {number?} - 0-5, double
+ * @param viewMore
  * @constructor
  */
-function Anime({id, title, subtitle, cover, tags, description, maxPage, language, favoriteId, stars}) {
+function Anime({
+                   id,
+                   title,
+                   subtitle,
+                   subTitle,
+                   cover,
+                   tags,
+                   description,
+                   maxPage,
+                   language,
+                   favoriteId,
+                   stars,
+                   viewMore
+               }) {
     this.id = id;
     this.title = title;
     this.subtitle = subtitle;
+    this.subTitle = subTitle;
     this.cover = cover;
     this.tags = tags;
     this.description = description;
@@ -870,19 +937,22 @@ function Anime({id, title, subtitle, cover, tags, description, maxPage, language
     this.language = language;
     this.favoriteId = favoriteId;
     this.stars = stars;
+    this.viewMore = viewMore;
 }
 
 /**
  * Create a anime details object
  * @param title {string}
+ * @param subtitle {string}
+ * @param subTitle {string} - equal to subtitle
  * @param cover {string}
  * @param description {string?}
  * @param tags {Map<string, string[]> | {} | null | undefined}
- * @param episode {Map<string, string> | {} | null | undefined}} - key: chapter id, value: chapter title
- * @param isFavorite {boolean | null | undefined}} - favorite status. If the anime source supports multiple folders, this field should be null
+ * @param chapters {Map<string, string> | {} | null | undefined} - key: chapter id, value: chapter title
+ * @param isFavorite {boolean | null | undefined} - favorite status. If the anime source supports multiple folders, this field should be null
  * @param subId {string?} - a param which is passed to comments api
  * @param thumbnails {string[]?} - for multiple page thumbnails, set this to null, and use `loadThumbnails` api to load thumbnails
- * @param recommend {anime[]?} - related comics
+ * @param recommend {Anime[]?} - related animes
  * @param commentCount {number?}
  * @param likesCount {number?}
  * @param isLiked {boolean?}
@@ -894,8 +964,30 @@ function Anime({id, title, subtitle, cover, tags, description, maxPage, language
  * @param maxPage {number?}
  * @constructor
  */
-function AnimeDetails({title, cover, description, tags, episode, isFavorite, subId, thumbnails, recommend, commentCount, likesCount, isLiked, uploader, updateTime, uploadTime, url, stars, maxPage}) {
+function AnimeDetails({
+                          title,
+                          subtitle,
+                          subTitle,
+                          cover,
+                          description,
+                          tags,
+                          episode,
+                          isFavorite,
+                          subId,
+                          thumbnails,
+                          recommend,
+                          commentCount,
+                          likesCount,
+                          isLiked,
+                          uploader,
+                          updateTime,
+                          uploadTime,
+                          url,
+                          stars,
+                          maxPage
+                      }) {
     this.title = title;
+    this.subtitle = subtitle ?? subTitle;
     this.cover = cover;
     this.description = description;
     this.tags = tags;
@@ -938,6 +1030,33 @@ function Comment({userName, avatar, content, time, replyCount, id, isLiked, scor
     this.isLiked = isLiked;
     this.score = score;
     this.voteStatus = voteStatus;
+}
+
+/**
+ * Create image loading config
+ * @param url {string?}
+ * @param method {string?} - http method, uppercase
+ * @param data {any} - request data, may be null
+ * @param headers {Object?} - request headers
+ * @param onResponse {((ArrayBuffer) => ArrayBuffer)?} - modify response data
+ * @param modifyImage {string?}
+ *  A js script string.
+ *  The script will be executed in a new Isolate.
+ *  A function named `modifyImage` should be defined in the script, which receives an [Image] as the only argument, and returns an [Image]..
+ * @param onLoadFailed {(() => ImageLoadingConfig)?} - called when the image loading failed
+ * @constructor
+ * @since 1.0.5
+ *
+ * To keep the compatibility with the old version, do not use the constructor. Consider creating a new object with the properties directly.
+ */
+function ImageLoadingConfig({url, method, data, headers, onResponse, modifyImage, onLoadFailed}) {
+    this.url = url;
+    this.method = method;
+    this.data = data;
+    this.headers = headers;
+    this.onResponse = onResponse;
+    this.modifyImage = modifyImage;
+    this.onLoadFailed = onLoadFailed;
 }
 
 class AnimeSource {
@@ -1016,7 +1135,21 @@ class AnimeSource {
         });
     }
 
-    init() { }
+    translation = {}
+
+    /**
+     * Translate given string with the current locale using the translation object.
+     * @param key {string}
+     * @returns {string}
+     * @since 1.2.5
+     */
+    translate(key) {
+        let locale = APP.locale;
+        return this.translation[locale]?.[key] ?? key;
+    }
+
+    init() {
+    }
 
     static sources = {}
 }
@@ -1048,7 +1181,7 @@ class Image {
             width: width,
             height: height
         })
-        if(key == null) return null;
+        if (key == null) return null;
         return new Image(key);
     }
 
@@ -1062,7 +1195,7 @@ class Image {
             function: "copyAndRotate90",
             key: this.key
         })
-        if(key == null) return null;
+        if (key == null) return null;
         return new Image(key);
     }
 
@@ -1213,13 +1346,15 @@ let UI = {
      * Show an input dialog
      * @param title {string}
      * @param validator {(string) => string | null | undefined} - A function that validates the input. If the function returns a string, the dialog will show the error message.
+     * @param image {string?} - Available since 1.2.2. An optional image to show in the dialog. You can use this to show a captcha.
      * @returns {Promise<string | null>} - The input value. If the dialog is canceled, return null.
      */
-    showInputDialog: (title, validator) => {
+    showInputDialog: (title, validator, image) => {
         return sendMessage({
             method: 'UI',
             function: 'showInputDialog',
             title: title,
+            image: image,
             validator: validator
         })
     },
@@ -1281,7 +1416,7 @@ let APP = {
  * @param text {string}
  * @returns {Promise<void>}
  *
- * @since 1.3.4
+ * @since 1.2.4
  */
 function setClipboard(text) {
     return sendMessage({
@@ -1294,10 +1429,25 @@ function setClipboard(text) {
  * Get clipboard text
  * @returns {Promise<string>}
  *
- * @since 1.3.4
+ * @since 1.2.4
  */
 function getClipboard() {
     return sendMessage({
         method: 'getClipboard'
+    })
+}
+
+/**
+ * Compute a function with arguments. The function will be executed in the engine pool which is not in the main thread.
+ * @param func {string} - A js code string which can be evaluated to a function. The function will receive the args as its only argument.
+ * @param args {any[]} - The arguments to pass to the function.
+ * @returns {Promise<any>} - The result of the function.
+ * @since 1.2.5
+ */
+function compute(func, ...args) {
+    return sendMessage({
+        method: 'compute',
+        function: func,
+        args: args
     })
 }
