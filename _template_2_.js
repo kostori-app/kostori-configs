@@ -56,7 +56,7 @@ class NewAnimeSource extends AnimeSource {
             document.dispose()
             return {
                 animes: animes,
-                maxPage: 2000
+                maxPage: null
             }
         },
         optionList: [
