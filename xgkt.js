@@ -7,13 +7,14 @@ class Xgkt extends AnimeSource {
 
     key = "xgkt"
 
-    version = "1.0.3"
+    version = "1.0.4"
 
     minAppVersion = "1.0.0"
 
     // update url
     url = "https://raw.githubusercontent.com/kostori-app/kostori-configs/master/xgkt.js"
 
+    host = "https://cn.xgcartoon.com"
 
     init() {
 

@@ -6,11 +6,13 @@ class Girigirilove extends AnimeSource{
 
     key = "girigirilove"
 
-    version = "1.1.3"
+    version = "1.1.4"
 
     minAppVersion = "1.0.0"
 
     url = "https://raw.githubusercontent.com/kostori-app/kostori-configs/master/girigirilove.js"
+
+    host = "https://bgm.girigirilove.com"
 
     get baseUrl() {
         return `https://bgm.girigirilove.com`

@@ -6,11 +6,13 @@ class Xfdm extends AnimeSource{
 
     key = "xfdm"
 
-    version = "1.0.6"
+    version = "1.0.7"
 
     minAppVersion = "1.0.0"
 
     url = "https://raw.githubusercontent.com/kostori-app/kostori-configs/master/xfdm.js"
+
+    host = "https://dm1.xfdm.pro"
 
     get baseUrl() {
         return `https://dm1.xfdm.pro`

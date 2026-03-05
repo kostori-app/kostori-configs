@@ -7,11 +7,13 @@ class Kimivod extends AnimeSource {
 
     key = "kimivod"
 
-    version = "1.0.4"
+    version = "1.0.5"
 
     minAppVersion = "1.0.0"
 
     url = "https://raw.githubusercontent.com/kostori-app/kostori-configs/master/kimivod.js"
+
+    host = "https://kimivod.com"
 
     init() {
 

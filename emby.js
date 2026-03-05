@@ -5,11 +5,13 @@ class Emby extends AnimeSource {
 
     key = "emby"
 
-    version = "1.0.5"
+    version = "1.0.6"
 
     minAppVersion = "1.0.0"
 
     url = "https://raw.githubusercontent.com/kostori-app/kostori-configs/master/emby.js"
+
+    host = this.baseUrl
 
     async init() {
     }
