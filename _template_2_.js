@@ -17,12 +17,12 @@ class NewAnimeSource extends AnimeSource {
         {
             title: "",
 
-            type: "mixed",
+            type: "multiPageAnimeList",
 
             load: async (page) => {
 
                 return {
-                    data: animeList,
+                    animes: animes,
                     maxPage: maxPage
                 }  // 返回包含所有动漫信息的数组
             }

@@ -3,13 +3,7 @@
         "name": "girigirilove",
         "fileName": "girigirilove.js",
         "key": "girigirilove",
-        "version": "1.1.4"
-    },
-    {
-        "name": "mxdm",
-        "fileName": "mxdm.js",
-        "key": "mxdm",
-        "version": "1.0.3"
+        "version": "1.1.6"
     },
     {
         "name": "xfdm",
@@ -39,4 +33,10 @@
         "key": "iwara",
         "version": "1.0.7"
     }
+,{
+    "name": "7sefun",
+    "fileName": "7sefun.js",
+    "key": "sefun7",
+    "version": "1.0.8"
+}
 ]

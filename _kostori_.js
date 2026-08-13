@@ -347,6 +347,75 @@ function setInterval(callback, delay) {
 }
 
 /**
+ * WebViewVideo - Headless WebView-based page extractor
+ *
+ * Loads a page in a native WebView (Android/iOS: HeadlessInAppWebView,
+ * Desktop: desktop_webview_window), executes JavaScript after load,
+ * and collects all values reported via __kostoriReport().
+ *
+ * @param {string} url     - The page URL to load
+ * @param {object} headers - Optional request headers (e.g. Referer, Cookie).
+ *                           'User-Agent' is applied at WebView level separately.
+ * @param {string} script  - JavaScript to inject after page load.
+ *                           Call __kostoriReport(data) to return data to Dart.
+ *                           'data' can be any JSON-serializable value.
+ * @param {number} waitMs  - How long (ms) to wait for async JS to finish
+ *                           before collecting results. Default: 8000.
+ * @returns {Promise<Array>} - Array of all values passed to __kostoriReport().
+ *
+ * @example
+ * // Extract all m3u8/mp4 URLs from a video page
+ * const results = await WebViewVideo.fetchVideoUrl(
+ *   'https://example.com/video',
+ *   { 'Referer': 'https://example.com', 'Cookie': 'token=abc' },
+ *   `
+ *     var origOpen = XMLHttpRequest.prototype.open;
+ *     XMLHttpRequest.prototype.open = function(m, u) {
+ *       if (/\.m3u8|\.mp4/i.test(u)) __kostoriReport({ type: 'video', url: u });
+ *       return origOpen.apply(this, arguments);
+ *     };
+ *   `,
+ *   10000,
+ * );
+ * // results => [{ type: 'video', url: 'https://...' }, ...]
+ *
+ * @example
+ * // Scrape image URLs from a gallery page
+ * const images = await WebViewVideo.fetchVideoUrl(
+ *   'https://example.com/gallery',
+ *   {},
+ *   `
+ *     document.querySelectorAll('img[src]').forEach(img => {
+ *       __kostoriReport({ type: 'image', url: img.src });
+ *     });
+ *   `,
+ * );
+ *
+ * @example
+ * // Extract embedded JSON data (e.g. Next.js __NEXT_DATA__)
+ * const data = await WebViewVideo.fetchVideoUrl(
+ *   'https://example.com/page',
+ *   {},
+ *   `
+ *     var el = document.getElementById('__NEXT_DATA__');
+ *     if (el) __kostoriReport(JSON.parse(el.textContent));
+ *   `,
+ * );
+ */
+const WebViewVideo = {
+    fetchVideoUrl: (url, headers, script, waitMs) => {
+        return sendMessage({
+            method: 'webview',
+            action: 'extract',
+            url: url,
+            headers: headers ?? {},
+            script: script ?? '',
+            waitMs: waitMs ?? 8000,
+        });
+    }
+};
+
+/**
  * Create a cookie object.
  * @param name {string}
  * @param value {string}
@@ -1360,6 +1429,33 @@ let UI = {
             title: title,
             image: image,
             validator: validator
+        })
+    },
+
+    /**
+     * Show a captcha dialog with the captcha image and a manual input field.
+     * The user reads the captcha and enters the code manually.
+     *
+     * Typical captcha flow inside a source script:
+     *   1. Detect that the response is a captcha page/JSON.
+     *   2. Get the captcha image URL (or data URL) and any captcha token.
+     *   3. const code = await UI.showCaptchaDialog('验证码', captchaImageUrl);
+     *   4. If code == null the user canceled -> throw/abort.
+     *   5. Submit the code (plus token) to verify via Network, then retry the
+     *      original request; you may also pass a validator to showInputDialog
+     *      so the answer is re-verified inside the dialog before it closes.
+     *
+     * @param title {string}
+     * @param image {string} - Captcha image URL or data URL.
+     * @returns {Promise<string | null>} - The captcha code entered by the user, or null if canceled.
+     * @since 1.2.8
+     */
+    showCaptchaDialog: (title, image) => {
+        return sendMessage({
+            method: 'UI',
+            function: 'showCaptchaDialog',
+            title: title,
+            image: image,
         })
     },
 

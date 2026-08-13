@@ -6,24 +6,174 @@ class Girigirilove extends AnimeSource{
 
     key = "girigirilove"
 
-    version = "1.1.4"
+    version = "1.1.6"
 
     minAppVersion = "1.0.0"
 
     url = "https://raw.githubusercontent.com/kostori-app/kostori-configs/master/girigirilove.js"
 
-    host = "https://bgm.girigirilove.com"
+    host = "https://ani.girigirilove.com"
 
     get baseUrl() {
-        return `https://bgm.girigirilove.com`
+        return `https://ani.girigirilove.com`
     }
 
     get userAgent(){
         return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36'
     }
 
+    /**
+     * 统一的 GET 请求：若响应是验证码拦截页，则弹出手动验证码输入框，
+     * 提交验证后带新 cookie 重试原请求。
+     */
+    async _get(url, headers = {}) {
+        let reqHeaders = {"User-Agent": this.userAgent, ...headers}
+        let res = await Network.get(url, reqHeaders)
+        let attempts = 0
+        while (this._isCaptchaPage(res) && attempts < 3) {
+            attempts++
+            let solved = await this._solveCaptcha(res, url)
+            if (!solved) {
+                throw '验证码验证失败，请重试'
+            }
+            // 用最终响应地址重试（bgm -> ani 内部重定向会丢会话 cookie），
+            // 并绕过 GET 缓存，避免命中旧的验证码页导致死循环
+            let retryUrl = (res && res.url) ? res.url : url
+            res = await Network.get(retryUrl, {...reqHeaders, "cache-time": "no"})
+        }
+        return res
+    }
+
+    /** 判断响应页面是否为验证码拦截页 */
+    _isCaptchaPage(res) {
+        if (!res || !res.body || typeof res.body !== 'string') return false
+        const lower = res.body.toLowerCase()
+        if (!lower.includes('captcha') && !lower.includes('verify') && !lower.includes('验证码')) {
+            return false
+        }
+        try {
+            let doc = new HtmlDocument(res.body)
+            let hit =
+                doc.querySelector('img.ds-verify-img, .verify-submit, input[name="verify"]') != null ||
+                doc.querySelector('img[src*="captcha"], img[src*="verify"], img[id*="captcha"], form[action*="verify"], input[name*="captcha"]') != null
+            doc.dispose()
+            return hit
+        } catch (e) {
+            return false
+        }
+    }
+
+    /**
+     * 解析验证码页面、弹框输入并提交验证。
+     * girigirilove 结构：验证码图片 img.ds-verify-img（src=/verify/index.html），
+     * 输入框 input[name=verify]，提交按钮 .verify-submit（data-type 标识场景）。
+     * 提交端点：POST /index.php/ajax/verify_check?type=search&verify=<code>，
+     * 返回 JSON {code:1} 表示通过。
+     */
+    async _solveCaptcha(res, reqUrl) {
+        // 验证码域名取响应最终 URL（含重定向，bgm -> ani 等镜像），兜底用请求 URL / baseUrl
+        let origin = this.baseUrl
+        let base = (res && res.url) ? res.url : reqUrl
+        let m = String(base).match(/^(https?:\/\/[^/]+)/)
+        if (m) origin = m[1]
+
+        let doc = new HtmlDocument(res.body)
+        let img = doc.querySelector('img.ds-verify-img') ||
+            doc.querySelector('img[src*="verify"], img[src*="captcha"], img[id*="captcha"]')
+        let button = doc.querySelector('.verify-submit')
+
+        // 必须在 dispose 之前读取元素属性
+        let imgUrl = ''
+        if (img) {
+            let src = img.attributes['src'] || img.attributes['data-src'] || ''
+            if (src) imgUrl = src.startsWith('http') ? src : origin + src
+        }
+        let type = 'search'
+        if (button && button.attributes['data-type']) {
+            type = button.attributes['data-type']
+        }
+        doc.dispose()
+
+        if (!imgUrl) {
+            throw '未找到验证码图片'
+        }
+
+        // 转成 data URL，确保弹窗内能加载（携带源 cookie）。
+        // 注意：isolate 模式下 fetchBytes().body 是普通 JS Array 而非 ArrayBuffer，
+        // 需要先包一层 Uint8Array 取 .buffer，否则 Convert.encodeBase64 会报 variable type error: array。
+        // cache-time: no 绕过 GET 缓存，确保每次拿到当前会话的新验证码图。
+        let imgData = imgUrl
+        try {
+            let r = await Network.fetchBytes('GET', imgUrl, {"User-Agent": this.userAgent, "cache-time": "no"})
+            if (r && r.body) {
+                let ab = new Uint8Array(r.body).buffer
+                imgData = 'data:image/jpeg;base64,' + Convert.encodeBase64(ab)
+            }
+        } catch (e) {
+            imgData = imgUrl
+        }
+
+        let code = await UI.showCaptchaDialog('请输入验证码', imgData)
+        if (code == null) {
+            throw '已取消验证码输入'
+        }
+
+        // 提交验证：POST verify_check，验证码走 query 参数（type + verify），返回 JSON {code:1} 表示通过。
+        // 不传 body（data 置空），避免空对象 {} 触发 PHP 500。
+        try {
+            let verifyUrl = origin + '/index.php/ajax/verify_check?type=' +
+                encodeURIComponent(type) + '&verify=' + encodeURIComponent(code)
+            let vr = await Network.post(
+                verifyUrl,
+                {
+                    "User-Agent": this.userAgent,
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                null
+            )
+            if (vr.status !== 200) return false
+            // 解析返回 JSON：code==1 通过
+            try {
+                let body = typeof vr.body === 'string' ? vr.body : Convert.decodeUtf8(vr.body)
+                if (body) {
+                    let j = JSON.parse(body)
+                    if (j && typeof j === 'object') {
+                        if ('code' in j) return Number(j.code) === 1
+                        if ('status' in j) {
+                            let s = j.status
+                            return s === 1 || s === 'success' || s === 200 || s === true
+                        }
+                    }
+                }
+            } catch (e) {}
+            return true
+        } catch (e) {
+            return false
+        }
+    }
+
     parseAnime(a) {
         let link = a.querySelector('a.public-list-exp')
+        // 兼容 vod-detail / search-list 结构
+        if (link == null) {
+            let hrefEl = a.querySelector('div.detail-info a[href]') || a.querySelector('a[href]')
+            if (hrefEl == null) return null
+            let id = (hrefEl.attributes['href'] || '').trim()
+            let img = a.querySelector('img.gen-movie-img') || a.querySelector('div.detail-pic img')
+            let image = img ? (img.attributes['data-src'] || '') : ''
+            let titleEl = a.querySelector('h3.slide-info-title')
+            let title = titleEl ? titleEl.text.trim() : ''
+            let cover = image ? (image.startsWith('http') ? image : this.baseUrl + image) : ''
+            return new Anime({
+                id: id,
+                title: title,
+                subtitle: '',
+                cover: cover,
+                tags: [],
+                description: '',
+            })
+        }
+
         let imagelink = link.querySelector('img.gen-movie-img')
         let infolink = a.querySelector('span.public-list-prb')
         let subNamelink = a.querySelector('div.public-list-subtitle')
@@ -49,6 +199,15 @@ class Girigirilove extends AnimeSource{
         })
     }
 
+    /** 兼容两种列表结构：public-list-box（旧）/ vod-detail（search-list 等新布局） */
+    _queryList(document) {
+        let divs = document.querySelectorAll('div.public-list-box')
+        if (divs.length === 0) {
+            divs = document.querySelectorAll('div.vod-detail')
+        }
+        return divs
+    }
+
 
     explore = [
         {
@@ -57,14 +216,14 @@ class Girigirilove extends AnimeSource{
         type: "mixed",
 
         load: async (page) => {
-            let res = await Network.get(`${this.baseUrl}/show/2--------${page}---/`,{"User-Agent": this.userAgent})
+            let res = await this._get(`${this.baseUrl}/show/2--------${page}---/`)
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
             }
             let document = new HtmlDocument(res.body)
-            let animeDivs = document.querySelectorAll('div.public-list-box')
+            let animeDivs = this._queryList(document)
             let animeList = []
-            let animes = animeDivs.map(a => this.parseAnime(a))
+            let animes = animeDivs.map(a => this.parseAnime(a)).filter(a => a !== null)
             animeList.push(animes)
             document.dispose()
             return {
@@ -79,14 +238,14 @@ class Girigirilove extends AnimeSource{
             type: "mixed",
 
             load: async (page) => {
-                let res = await Network.get(`${this.baseUrl}/show/3--------${page}---/`,{"User-Agent": this.userAgent})
+                let res = await this._get(`${this.baseUrl}/show/3--------${page}---/`)
                 if(res.status !== 200) {
                     throw `Invalid Status Code ${res.status}`
                 }
                 let document = new HtmlDocument(res.body)
-                let animeDivs = document.querySelectorAll('div.public-list-box')
+                let animeDivs = this._queryList(document)
                 let animeList = []
-                let animes = animeDivs.map(a => this.parseAnime(a))
+                let animes = animeDivs.map(a => this.parseAnime(a)).filter(a => a !== null)
                 animeList.push(animes)
                 document.dispose()
                 return {
@@ -101,14 +260,14 @@ class Girigirilove extends AnimeSource{
             type: "mixed",
 
             load: async (page) => {
-                let res = await Network.get(`${this.baseUrl}/show/21--------${page}---/`,{"User-Agent": this.userAgent})
+                let res = await this._get(`${this.baseUrl}/show/21--------${page}---/`)
                 if(res.status !== 200) {
                     throw `Invalid Status Code ${res.status}`
                 }
                 let document = new HtmlDocument(res.body)
-                let animeDivs = document.querySelectorAll('div.public-list-box')
+                let animeDivs = this._queryList(document)
                 let animeList = []
-                let animes = animeDivs.map(a => this.parseAnime(a))
+                let animes = animeDivs.map(a => this.parseAnime(a)).filter(a => a !== null)
                 animeList.push(animes)
                 document.dispose()
                 return {
@@ -168,13 +327,13 @@ class Girigirilove extends AnimeSource{
                 }
                 return parts.join("-");
             };
-            let res = await Network.get(`${this.baseUrl}${injectPage(param, page)}`, {"User-Agent": this.userAgent})
+            let res = await this._get(`${this.baseUrl}${injectPage(param, page)}`)
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
             }
             let document = new HtmlDocument(res.body)
-            let animeDivs = document.querySelectorAll('div.public-list-box')
-            let animes = animeDivs.map(a => this.parseAnime(a))
+            let animeDivs = this._queryList(document)
+            let animes = animeDivs.map(a => this.parseAnime(a)).filter(a => a !== null)
             document.dispose()
             return {
                 animes: animes,
@@ -189,27 +348,39 @@ class Girigirilove extends AnimeSource{
     search = {
         load:async (keyword,searchOption,page) => {
             let url = `${this.baseUrl}/search/${keyword}----------${page}---/`
-            let res = await Network.get(url, {"User-Agent": this.userAgent})
+            let res = await this._get(url)
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
             }
             let document = new HtmlDocument(res.body)
-            let animeDivs = document.querySelectorAll('div.public-list-box')
+            // 搜索结果的条目结构：div.vod-detail.search-list
+            let animeDivs = document.querySelectorAll('div.vod-detail.search-list')
+            if (animeDivs.length === 0) {
+                animeDivs = document.querySelectorAll('div.vod-detail')
+            }
             let animes = []
             for (let div of animeDivs){
-                let id = div.querySelector('a.public-list-exp').attributes['href'].trim() ?? ''
-                let image = div.querySelector('a.public-list-exp img').attributes['data-src'].trim() ?? ''
-                let title = div.querySelector('.thumb-txt.cor4.hide').text.trim() ?? ''
-                let info = div.querySelector('.public-list-prb.hide.ft2').text.trim() ?? ''
-                let category = div.querySelector('.thumb-else.cor5.hide').querySelectorAll('a').map(a => a.text.trim())
-                animes.push({
-                    id: id,
-                    title: title,
-                    subtitle: '',
-                    cover: this.baseUrl + image,
-                    tags: category,
-                    description: info,
-                })
+                try {
+                    let a = div.querySelector('div.detail-info a[href]') || div.querySelector('a[href]')
+                    let id = a ? (a.attributes['href'] || '').trim() : ''
+                    let img = div.querySelector('img.gen-movie-img') || div.querySelector('div.detail-pic img')
+                    let image = img ? (img.attributes['data-src'] || '') : ''
+                    let titleEl = div.querySelector('h3.slide-info-title')
+                    let title = titleEl ? titleEl.text.trim() : ''
+                    let infoEl = div.querySelector('span.slide-info-remarks.cor5') || div.querySelector('.slide-info-remarks')
+                    let info = infoEl ? infoEl.text.trim() : ''
+                    let cover = image ? (image.startsWith('http') ? image : this.baseUrl + image) : ''
+                    animes.push({
+                        id: id,
+                        title: title,
+                        subtitle: '',
+                        cover: cover,
+                        tags: [],
+                        description: info,
+                    })
+                } catch (e) {
+                    // 单个条目解析失败则跳过
+                }
             }
             document.dispose()
             return {
@@ -221,12 +392,12 @@ class Girigirilove extends AnimeSource{
 
     anime = {
         loadInfo: async (id) => {
-            let res = await Network.get(`${this.baseUrl}${id}`,{})
+            let res = await this._get(`${this.baseUrl}${id}`)
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
             }
             let document = new HtmlDocument(res.body)
-            let animeDivs = document.querySelectorAll('div.public-list-box')
+            let animeDivs = this._queryList(document)
             let titleElement = document.querySelector('h3.slide-info-title.hide')
             let title = titleElement.text.trim() ?? ''
             let descriptionElement = document.querySelector('#height_limit.text.cor3')
@@ -305,7 +476,7 @@ class Girigirilove extends AnimeSource{
         },
 
         loadEp: async (animeId, epId) => {
-            let res = await Network.get(`${this.baseUrl}${epId}`,{})
+            let res = await this._get(`${this.baseUrl}${epId}`)
             if (res.status !== 200) {
                 throw "Invalid status code: " + res.status
             }
