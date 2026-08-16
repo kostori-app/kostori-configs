@@ -7,7 +7,7 @@ class sefun7 extends AnimeSource {
 
     key = "sefun7"
 
-    version = "1.0.8"
+    version = "1.0.9"
 
     minAppVersion = "1.0.0"
 
@@ -88,19 +88,19 @@ class sefun7 extends AnimeSource {
         let seen = {}
         for (let hops = 0; hops < 5; hops++) {
             // 1) 先带扫描：非 CF 页面几秒内 early-complete 返回
-            let results = await WebViewVideo.fetchVideoUrl(
+            let resultsScan = await WebViewVideo.fetchVideoUrl(
                 current,
                 { 'User-Agent': this.userAgent, 'Referer': this.baseUrl + '/' },
                 '',
                 25000,
                 true,
             )
-            let video = this.pickVideo(results)
+            let video = this.pickVideo(resultsScan)
             if (video) return video
 
             // 2) 可能是 CF 挑战页（注入的 fetch/XHR 钩子会干扰挑战），
             //    换无扫描重试：不注入 JS 钩子，仅靠原生 onLoadResource
-            results = await WebViewVideo.fetchVideoUrl(
+            let results = await WebViewVideo.fetchVideoUrl(
                 current,
                 { 'User-Agent': this.userAgent, 'Referer': this.baseUrl + '/' },
                 '',
@@ -110,23 +110,29 @@ class sefun7 extends AnimeSource {
             video = this.pickVideo(results)
             if (video) return video
 
-            // 3) player_url 解码跳转
-            let pv = results.find(r => r && r.type === 'player_url' && r.url)
+            // 3) player_url 解码：直链立即返回；否则记为候选跳转页
+            let fallbackUrl = null
+            let pv = (resultsScan || []).find(r => r && r.type === 'player_url' && r.url)
             if (pv) {
                 let decoded = this.decodeMaccmsUrl(pv.url)
                 if (decoded && /\.(m3u8|mp4)(\?.*)?$/i.test(decoded)) return decoded
                 if (decoded && /^https?:\/\//i.test(decoded) && !seen[decoded]) {
-                    seen[decoded] = true
-                    current = decoded
-                    continue
+                    fallbackUrl = decoded
                 }
             }
 
-            // 4) 跟随嵌套 iframe 播放页（如 QQ 播放器）：作为主 frame 重新加载嗅探
-            let np = results.find(r => r && r.type === 'nested_page' && r.url && !seen[r.url])
+            // 4) 嵌套播放器页优先跟随（跳过当前页自身，避免死循环）
+            let np = (resultsScan || []).find(r => r && r.type === 'nested_page' && r.url && r.url !== current && !seen[r.url])
             if (np) {
                 seen[np.url] = true
                 current = np.url
+                continue
+            }
+
+            // 5) 其次跟随 player_url 解码的跳转页
+            if (fallbackUrl) {
+                seen[fallbackUrl] = true
+                current = fallbackUrl
                 continue
             }
             break
@@ -374,15 +380,15 @@ class sefun7 extends AnimeSource {
 
             // 按播放线分组剧集：每个 .chat-header 带 .chat-stream-bfq（线路名），
             // 其后的剧集容器含 .message-container.vod-play-list-container。
-            // 1) 优先只保留名称包含 "b" 的线路（如 "b"、"B线路"、"线路B" 等）。
+            // 解析所有线路（保留各自线路名，同名去重）。
             let eps = {}
             let chatHeaders = document.querySelectorAll('.chat-header')
+            let fallbackIndex = 0
 
             for (let h of chatHeaders) {
+                fallbackIndex++
                 let bfq = h.querySelector('.chat-stream-bfq')
-                let lineName = bfq?.text?.trim() ?? ''
-                if (!lineName) continue
-                if (!lineName.toLowerCase().includes('b')) continue
+                let lineName = bfq?.text?.trim() ?? `线路${fallbackIndex}`
                 let parsed = this.getLineEpisodes(h, lineName)
                 if (!parsed) continue
                 // 同名线路去重
@@ -391,20 +397,7 @@ class sefun7 extends AnimeSource {
                 eps[key] = parsed.epMap
             }
 
-            // 2) 没有含 "b" 的线路时，兜底解析所有线路
-            if (Object.keys(eps).length === 0) {
-                let fallbackIndex = 0
-                for (let h of chatHeaders) {
-                    fallbackIndex++
-                    let parsed = this.getLineEpisodes(h, `线路${fallbackIndex}`)
-                    if (!parsed) continue
-                    let key = parsed.name, n = 1
-                    while (eps[key]) key = `${parsed.name}${n++}`
-                    eps[key] = parsed.epMap
-                }
-            }
-
-            // 3) 完全无剧集时给空占位
+            // 完全无剧集时给空占位
             if (Object.keys(eps).length === 0) {
                 let epMap = new Map()
                 epMap.set('#', '暂无剧集')
