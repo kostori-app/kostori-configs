@@ -7,7 +7,7 @@ class sefun7 extends AnimeSource {
 
     key = "sefun7"
 
-    version = "1.0.9"
+    version = "1.1.0"
 
     minAppVersion = "1.0.0"
 
@@ -28,6 +28,11 @@ class sefun7 extends AnimeSource {
             'User-Agent': this.userAgent,
             'Referer': this.baseUrl + '/',
         }
+    }
+
+    // 供 app 端下载/播放取请求头（httpHeaders 属性是 app 解析约定）
+    get httpHeaders() {
+        return this.headers
     }
 
     init() {}

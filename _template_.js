@@ -274,6 +274,18 @@ class NewAnimeSource extends AnimeSource {
      [Optional] explore page list (the home page of the source)
      Shown as tabs on the source's explore page.
     */
+    /*
+     explore 的 viewMore 与 category 的 target 都是 PageJumpTarget，支持两种写法：
+
+     - Map 写法（推荐）：
+       { page: 'category', attributes: { category: '分类名', param: 'xxx' }, url: 'https://...' }
+       url 可选：提供后二级页面右上角会显示"打开网页"入口。
+
+     - String 写法（旧版，兼容）：
+       `search:关键词`
+       `category:分类名`
+       `category:分类名@param`   // @ 后为 param，传给 categoryAnimes.load
+     */
     explore = [
         /*
          Type 1: singlePageWithMultiPart
@@ -500,10 +512,16 @@ class NewAnimeSource extends AnimeSource {
         },
 
         /**
-         * load Url of a chapter
+         * load play url of a chapter
          * @param animeId {string}
          * @param epId {string?}
-         * @returns {Promise<{Url: string}>}
+         * @returns {Promise<string | {url: string, headers?: Object, audioTracks?: Object[], subtitleTracks?: Object[], videoStreams?: Object[], container?: string, playSessionId?: string}>}
+         * 返回播放地址（String）；或返回结构化对象携带媒体信息：
+         * - `headers` 播放请求头（如鉴权）
+         * - `audioTracks` 音轨 `[{ index, language, title, codec, channels }]`
+         * - `subtitleTracks` 字幕 `[{ index, language, title, codec }]`
+         * - `videoStreams` 视频流/清晰度 `[{ index, width, height, bitrate, codec, name }]`
+         * - `container` 容器格式、`playSessionId` 转码会话
          */
         loadEp: async (animeId, epId) => {
             /*
@@ -512,11 +530,47 @@ class NewAnimeSource extends AnimeSource {
             if(res.status !== 200) throw `Invalid status code: ${res.status}`
             let doc = new HtmlDocument(Convert.decodeUtf8(res.body))
             let raw = doc.querySelector('body')?.innerHTML ?? ''
-            let m = raw.match(/https?:\/\/[^"']+\.m3u8[^"']*/)
+            let m = raw.match(/https?:\/\/[^"']+\.m3u8[^"']*?/)
             if(m) return m[0]
             return ''
             ```
             */
+        },
+
+        /**
+         * [Optional] 播放进度上报（播放中每 10s 调用；如 emby 同步历史到服务端）
+         * @param url {string} - 播放地址（源从中提取条目 id）
+         * @param positionMs {number}
+         * @param durationMs {number}
+         * @param playing {boolean}
+         * @param playSessionId {string?}
+         * @returns {Promise<any>}
+         */
+        playbackProgress: async (url, positionMs, durationMs, playing, playSessionId) => {
+
+        },
+
+        /**
+         * [Optional] 播放停止上报（退出播放器时调用）
+         * @param url {string}
+         * @param positionMs {number}
+         * @param playSessionId {string?}
+         * @returns {Promise<any>}
+         */
+        playbackStopped: async (url, positionMs, playSessionId) => {
+
+        },
+
+        /**
+         * [Optional] 通用源操作，按约定 action 处理：
+         * favorite / delete / markPlayed / clearPlayback / rate /
+         * sendComment / likeAnime / likeComment / voteComment / loadComments
+         * @param action {string}
+         * @param params {Object}
+         * @returns {Promise<any>}
+         */
+        sourceAction: async (action, params) => {
+
         },
 
         /**

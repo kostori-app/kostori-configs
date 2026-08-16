@@ -26,7 +26,7 @@
         "name": "emby",
         "fileName": "emby.js",
         "key": "emby",
-        "version": "1.0.6"
+        "version": "1.0.7"
     },{
         "name": "iwara",
         "fileName": "iwara.js",
@@ -37,6 +37,6 @@
     "name": "7sefun",
     "fileName": "7sefun.js",
     "key": "sefun7",
-    "version": "1.0.9"
+    "version": "1.1.0"
 }
 ]

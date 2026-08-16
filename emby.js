@@ -5,7 +5,7 @@ class Emby extends AnimeSource {
 
     key = "emby"
 
-    version = "1.0.6"
+    version = "1.0.7"
 
     minAppVersion = "1.0.0"
 
@@ -176,6 +176,40 @@ class Emby extends AnimeSource {
 
                 return result
             }
+        },
+        {
+            title: "我的收藏",
+            type: "multiPageAnimeList",
+            load: async (page) => {
+                let startIndex = (page - 1) * 100
+                let res = await Network.get(`${this.baseUrl}/Users/${this.userId}/Items?Filters=IsFavorite=true&IncludeItemTypes=Movie,Series&SortBy=DateLastContentAdded&SortOrder=Descending&StartIndex=${startIndex}&Limit=100&Recursive=true&UserId=${this.userId}`, this.headers)
+                if (res.status !== 200) {
+                    throw `Invalid Status Code ${res.status}`
+                }
+                let json = JSON.parse(res.body)
+                let animes = json.Items.map(a => {
+                    let id = a.Id;
+                    let name = a.Name;
+                    let cover = a.ImageTags.Primary != null
+                        ? `${this.baseUrl}/Items/${id}/Images/Primary?tag=${a.ImageTags.Primary}`
+                        : `${this.baseUrl}/Users/${this.userId}/Images/Primary`
+                    return new Anime({
+                        id: id,
+                        title: name,
+                        subtitle: '',
+                        cover: cover,
+                        tags: [],
+                        description: '',
+                    });
+                });
+                let pageCount = json.TotalRecordCount <= 100
+                    ? 1
+                    : Math.ceil(json.TotalRecordCount / 100);
+                return {
+                    animes: animes,
+                    maxPage: pageCount
+                }
+            }
         }
     ]
 
@@ -304,6 +338,14 @@ class Emby extends AnimeSource {
                 broadcastDate.push(`${json.ProductionYear}`);
             }
 
+            // 剧照/背景图
+            let thumbnails = []
+            if (Array.isArray(json.BackdropImageTags) && json.BackdropImageTags.length > 0) {
+                for (let i = 0; i < json.BackdropImageTags.length; i++) {
+                    thumbnails.push(`${this.baseUrl}/Items/${id}/Images/Backdrop/${i}?tag=${json.BackdropImageTags[i]}`)
+                }
+            }
+
             let actors = json.People.map(a => a.Name)
             let tags = json.TagItems.map(t => t.Name);
             let ep = new Map()
@@ -411,6 +453,7 @@ class Emby extends AnimeSource {
                 title: title,
                 cover: cover,
                 description: description,
+                thumbnails: thumbnails.length > 0 ? thumbnails : null,
                 tags: {
                     "年份": broadcastDate,
                     "演员": actors,
@@ -422,7 +465,133 @@ class Emby extends AnimeSource {
             })
         },
         loadEp: async (animeId, epId) => {
-            return epId;
+            if (typeof epId !== 'string' || epId.length === 0) {
+                throw "暂无剧集"
+            }
+            // 从播放 URL 提取媒体 Id，调 PlaybackInfo 获取音轨/字幕/视频流
+            try {
+                let m = epId.match(/\/Videos\/([^/?#]+)/)
+                if (m) {
+                    let itemId = m[1]
+                    let piRes = await Network.post(
+                        `${this.baseUrl}/Items/${itemId}/PlaybackInfo?UserId=${this.userId}&StartTimeTicks=0&AutoOpenLiveStream=true`,
+                        this.headers,
+                        {}
+                    )
+                    if (piRes.status === 200) {
+                        let pi = JSON.parse(piRes.body)
+                        let src = (pi.MediaSources || [])[0]
+                        if (src) {
+                            let audioTracks = []
+                            let subtitleTracks = []
+                            let videoStreams = []
+                            for (let ms of (src.MediaStreams || [])) {
+                                if (ms.Type === 'Audio') {
+                                    audioTracks.push({
+                                        index: ms.Index != null ? ms.Index : audioTracks.length,
+                                        language: ms.Language || null,
+                                        title: ms.DisplayTitle || null,
+                                        codec: ms.Codec || null,
+                                        channels: ms.Channels != null ? ms.Channels : null,
+                                    })
+                                } else if (ms.Type === 'Subtitle') {
+                                    subtitleTracks.push({
+                                        index: ms.Index != null ? ms.Index : subtitleTracks.length,
+                                        language: ms.Language || null,
+                                        title: ms.DisplayTitle || null,
+                                        codec: ms.Codec || null,
+                                        channels: null,
+                                    })
+                                } else if (ms.Type === 'Video') {
+                                    videoStreams.push({
+                                        index: ms.Index != null ? ms.Index : videoStreams.length,
+                                        width: ms.Width != null ? ms.Width : null,
+                                        height: ms.Height != null ? ms.Height : null,
+                                        bitrate: ms.BitRate != null ? ms.BitRate : null,
+                                        codec: ms.Codec || null,
+                                        name: ms.DisplayTitle || null,
+                                    })
+                                }
+                            }
+                            return {
+                                url: epId,
+                                headers: this.headers,
+                                audioTracks: audioTracks,
+                                subtitleTracks: subtitleTracks,
+                                videoStreams: videoStreams,
+                                container: src.Container || null,
+                                playSessionId: pi.PlaySessionId || null,
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                // 媒体信息获取失败则退化为纯 URL
+            }
+            return epId
+        },
+        playbackProgress: async (url, positionMs, durationMs, playing, playSessionId) => {
+            try {
+                let m = url.match(/\/Videos\/([^/?#]+)/)
+                if (!m) return null
+                await Network.post(
+                    `${this.baseUrl}/Sessions/Playing/Progress?api_key=${this.apiKey}`,
+                    this.headers,
+                    {
+                        ItemId: m[1],
+                        PositionTicks: positionMs * 10000,
+                        IsPaused: !playing,
+                        PlaySessionId: playSessionId || null,
+                    })
+            } catch (e) {}
+            return null
+        },
+        playbackStopped: async (url, positionMs, playSessionId) => {
+            try {
+                let m = url.match(/\/Videos\/([^/?#]+)/)
+                if (!m) return null
+                await Network.post(
+                    `${this.baseUrl}/Sessions/Playing/Stopped?api_key=${this.apiKey}`,
+                    this.headers,
+                    {
+                        ItemId: m[1],
+                        PositionTicks: positionMs * 10000,
+                        PlaySessionId: playSessionId || null,
+                    })
+            } catch (e) {}
+            return null
+        },
+        sourceAction: async (action, params) => {
+            try {
+                if (action === 'favorite') {
+                    let id = params.id
+                    if (params.favorite) {
+                        await Network.post(`${this.baseUrl}/Users/${this.userId}/FavoriteItems/${id}?api_key=${this.apiKey}`, this.headers, {})
+                    } else {
+                        await Network.delete(`${this.baseUrl}/Users/${this.userId}/FavoriteItems/${id}?api_key=${this.apiKey}`, this.headers)
+                    }
+                } else if (action === 'delete') {
+                    await Network.delete(`${this.baseUrl}/Items/${params.id}?api_key=${this.apiKey}`, this.headers)
+                } else if (action === 'markPlayed') {
+                    let id = params.id
+                    if (params.played) {
+                        await Network.post(`${this.baseUrl}/Users/${this.userId}/PlayedItems/${id}?api_key=${this.apiKey}`, this.headers, {})
+                    } else {
+                        await Network.delete(`${this.baseUrl}/Users/${this.userId}/PlayedItems/${id}?api_key=${this.apiKey}`, this.headers)
+                    }
+                } else if (action === 'clearPlayback') {
+                    await Network.post(`${this.baseUrl}/Sessions/Playing/Progress?api_key=${this.apiKey}`, this.headers, {
+                        ItemId: params.id,
+                        PositionTicks: 0,
+                        IsPaused: true,
+                    })
+                } else if (action === 'rate') {
+                    await Network.post(`${this.baseUrl}/Users/${this.userId}/Items/${params.id}/Rating?api_key=${this.apiKey}`, this.headers, {
+                        Rating: params.rating,
+                    })
+                }
+            } catch (e) {}
+            return null
         },
         onClickTag: (namespace, tag) => {
             return {
