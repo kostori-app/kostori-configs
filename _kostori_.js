@@ -403,7 +403,7 @@ function setInterval(callback, delay) {
  * );
  */
 const WebViewVideo = {
-    fetchVideoUrl: (url, headers, script, waitMs) => {
+    fetchVideoUrl: (url, headers, script, waitMs, scan) => {
         return sendMessage({
             method: 'webview',
             action: 'extract',
@@ -411,6 +411,24 @@ const WebViewVideo = {
             headers: headers ?? {},
             script: script ?? '',
             waitMs: waitMs ?? 8000,
+            scan: scan ?? true,
+        });
+    },
+    /**
+     * Loads a page in the headless WebView and returns its rendered HTML.
+     * Useful when plain HTTP (Network.get/post) is blocked (Cloudflare 522 etc).
+     * @param {string} url     - The page URL to load.
+     * @param {object} headers - Optional request headers.
+     * @param {number} waitMs  - Max wait (ms) for page load + render. Default: 10000.
+     * @returns {Promise<?string>} - Rendered `document.documentElement.outerHTML`, or null on failure.
+     */
+    fetchHtml: (url, headers, waitMs) => {
+        return sendMessage({
+            method: 'webview',
+            action: 'html',
+            url: url,
+            headers: headers ?? {},
+            waitMs: waitMs ?? 10000,
         });
     }
 };

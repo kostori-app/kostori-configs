@@ -5,9 +5,9 @@ class Iwara extends AnimeSource {
 
     key = "iwara"
 
-    version = "1.0.7"
+    version = "1.0.8"
 
-    minAppVersion = "1.0.0"
+    minAppVersion = "2.0.0"
 
     url = "https://raw.githubusercontent.com/kostori-app/kostori-configs/master/iwara.js"
 
@@ -51,17 +51,51 @@ class Iwara extends AnimeSource {
     parseAnime(a) {
         let id = a.id;
         let title = a.title;
-        let author = a.user.name;
+        let author = a.user?.name ?? '';
         let durationInSeconds = a.file?.duration ?? 0
         let minutes = Math.floor(durationInSeconds / 60);
         let seconds = Math.floor(durationInSeconds % 60);
-        let formattedDuration = `${minutes}分${seconds}秒`;
-        let subtitle = `${author} | ${formattedDuration}`;
-        if(durationInSeconds === 0) {
-            subtitle = author
+        let formattedDuration = minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`;
+
+        // 观看次数（万次缩写）
+        let viewsCount = '';
+        const numViews = a['观看次数'] ?? 0;
+        if (numViews > 0) {
+            viewsCount = numViews >= 10000
+                ? `${(numViews / 10000).toFixed(1)}万次`
+                : `${numViews}次`;
         }
+
+        // 过去时间（createdAt → 相对时间）
+        let timeText = '';
+        if (a.createdAt) {
+            const created = new Date(a.createdAt);
+            const diffMs = Date.now() - created.getTime();
+            const days = Math.floor(diffMs / 86400000);
+            const hours = Math.floor(diffMs / 3600000);
+            const mins = Math.floor(diffMs / 60000);
+            if (days > 30) timeText = `${Math.floor(days / 30)}个月前`;
+            else if (days > 0) timeText = `${days}天前`;
+            else if (hours > 0) timeText = `${hours}小时前`;
+            else if (mins > 0) timeText = `${mins}分钟前`;
+            else timeText = '刚刚';
+        }
+
+        // 点赞率（likes/views → 0-5 星）
+        let stars = null;
+        const numLikes = a['点赞数'] ?? 0;
+        if (numViews > 0 && numLikes > 0) {
+            stars = Math.min(5, (numLikes / numViews) * 5);
+        }
+
         let cover = `${this.baseImgUrl}original/${a.file?.id}/thumbnail-01.jpg`
-        let tags = a.tags.map(a => a.id)
+        let tags = (a.tags || []).map(t => t.id)
+
+        // 海报布局约定：description 行 [时长, 观看数, 过去时间]；subtitle = 作者
+        const lines = [];
+        if (durationInSeconds > 0 && formattedDuration) lines.push({ text: formattedDuration });
+        if (viewsCount) lines.push({ text: viewsCount });
+        if (timeText) lines.push({ text: timeText });
 
         return new Anime({
             id: id,
@@ -69,7 +103,8 @@ class Iwara extends AnimeSource {
             subtitle: author ?? '',
             cover: cover ?? '',
             tags: tags ?? [],
-            description: subtitle ?? '',
+            description: lines,   // List<Map> 结构化行，海报卡片逐行展示
+            stars: stars,         // 点赞率 0-5
         });
     }
 
@@ -285,22 +320,80 @@ class Iwara extends AnimeSource {
             let title = json.title
             let cover =  `${this.baseImgUrl}original/${json.file.id}/thumbnail-01.jpg`
             let description =  json.body ?? ''
-            let author = [`${json.user.name}`]
-            let createdAt = [`${json.createdAt}`]
             let tags = json.tags.map(a => a.id)
+
+            // 海报元信息：作者 / 头像 / 观看次数 / 过去时间 / 点赞率
+            let uploader = json.user?.name ?? ''
+            let uploaderAvatar = json.user?.avatar?.id
+                ? `${this.baseImgUrl}original/${json.user.avatar.id}/thumbnail-01.jpg`
+                : ''
+            let viewsCount = ''
+            const numViews = json['numViews'] ?? 0
+            if (numViews > 0) {
+                viewsCount = numViews >= 10000
+                    ? `${(numViews / 10000).toFixed(1)}万次`
+                    : `${numViews}次`
+            }
+            let uploadTime = ''
+            if (json.createdAt) {
+                const created = new Date(json.createdAt)
+                const diffMs = Date.now() - created.getTime()
+                const days = Math.floor(diffMs / 86400000)
+                if (days > 30) uploadTime = `${Math.floor(days / 30)}个月前`
+                else if (days > 0) uploadTime = `${days}天前`
+                else uploadTime = '刚刚'
+            }
+            let stars = null
+            const numLikes = json['numLikes'] ?? 0
+            if (numViews > 0 && numLikes > 0) {
+                stars = Math.min(5, (numLikes / numViews) * 5)
+            }
+
             let animeRes = await Network.get(`${this.apiBaseUrl}video/${id}/related?page=0&limit=40`, this.headers())
             if(animeRes.status !== 200) {
                 throw `Invalid Status Code ${animeRes.status}`
             }
             let animeJson = JSON.parse(animeRes.body)
             let animes = animeJson.results.map(a => this.parseAnime(a))
+
+            // 单集：分片（分辨率）由 loadEp 解析
+            let ep = new Map()
+            ep.set('watch', '观看')
+            let eps = {
+                "iwara": ep,
+            }
+
+            return new AnimeDetails({
+                id: id,
+                title: title,
+                cover: cover,
+                description: description,
+                tags: {
+                    "标签": tags,
+                },
+                episode: eps,
+                recommend: animes,
+                uploader: uploader,
+                uploaderAvatar: uploaderAvatar,
+                uploadTime: uploadTime,
+                viewsCount: viewsCount,
+                stars: stars,
+                url: `https://www.iwara.tv/video/${id}`,
+            })
+        },
+        loadEp: async (animeId, epId) => {
+            // 请求视频信息拿 fileUrl，解析分片（不同分辨率 m3u8）
+            let res = await Network.get(`${this.apiBaseUrl}video/${animeId}`, this.headers())
+            if (res.status !== 200) throw `Invalid Status Code ${res.status}`
+            let json = JSON.parse(res.body)
+
             let info = parseUrlInfo(json.fileUrl);
             let uuid = info.fileId
             let expires = info.expires
             let concatenatedString = `${uuid}_${expires}_mSvL05GfEmeEmsEYfGCnVpEjYgTJraJN`
             let bytes = Convert.encodeUtf8(concatenatedString)
             let xVersion = Convert.hexEncode(Convert.sha1(bytes))
-            let ep = new Map()
+
             let epsRes =  await Network.get(`${json.fileUrl}`, {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
                 'Content-Type': 'application/json',
                 'Accept': 'application/json, text/plain, */*',
@@ -313,36 +406,26 @@ class Iwara extends AnimeSource {
                 throw `Invalid Status Code ${epsRes.status}`
             }
             let epsJson = JSON.parse(epsRes.body)
-            for(let a of epsJson) {
-                if(a.name === 'preview') continue
-                let title = a.name ?? ''
-                let link = `https:${a.src.view}`
-                if (title.length === 0) {
-                    title = `第${ep.size + 1}話`;
-                }
-                ep.set(link, title);
-            }
-            let eps = {
-                "iwara": ep,
-            }
 
-            return new AnimeDetails({
-                id: id,
-                title: title,
-                cover: cover,
-                description: description,
-                tags: {
-                    "作者": author,
-                    "创建时间": createdAt,
-                    "标签": tags,
-                },
-                episode: eps,
-                recommend: animes,
-                url: `https://www.iwara.tv/video/${id}`,
-            })
-        },
-        loadEp: async (animeId, epId) => {
-            return epId;
+            // 分片 = 不同分辨率（preview 除外），全部返回供清晰度切换
+            let videoStreams = []
+            let url = ''
+            for (let a of epsJson) {
+                if (a.name === 'preview') continue
+                let src = `https:${a.src.view}`
+                if (!url) url = src
+                videoStreams.push({
+                    index: videoStreams.length,
+                    name: a.name,
+                    url: src,
+                })
+            }
+            if (!url) throw 'No source found'
+
+            return {
+                url: url,
+                videoStreams: videoStreams,
+            }
         },
         onClickTag: (namespace, tag) => {
             return {

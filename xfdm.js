@@ -6,7 +6,7 @@ class Xfdm extends AnimeSource{
 
     key = "xfdm"
 
-    version = "1.0.7"
+    version = "1.0.9"
 
     minAppVersion = "1.0.0"
 
@@ -14,8 +14,196 @@ class Xfdm extends AnimeSource{
 
     host = "https://dm1.xfdm.pro"
 
+    // ── 稀饭动漫 Next（next.xifanacg.com / api.xifanacg.com）──────────────────
+    // 规则来源：https://github.com/Predidit/KazumiRules/blob/main/xfdmnext.json
+    // 通过设置里的「接口版本」在旧站与新站之间切换。
+    nextBaseUrl = "https://next.xifanacg.com"
+
+    nextApiUrl = "https://api.xifanacg.com"
+
+    nextApiKey = "sb_publishable_OBIVAWACIX6lPXrO98_z24_HcsmalkA"
+
     get baseUrl() {
         return `https://dm1.xfdm.pro`
+    }
+
+    get nextHeaders() {
+        return {
+            'apikey': this.nextApiKey,
+            'Authorization': `Bearer ${this.nextApiKey}`,
+            'Content-Type': 'application/json',
+        }
+    }
+
+    // 是否启用稀饭动漫 Next 新接口（默认使用旧接口）
+    useNext() {
+        try {
+            return this.loadSetting('apiType') === 'next'
+        } catch (e) {
+            return false
+        }
+    }
+
+    // 调用 Next 站的 Supabase RPC
+    async nextQuery(fn, body) {
+        let res = await Network.post(
+            `${this.nextApiUrl}/rest/v1/rpc/${fn}`,
+            this.nextHeaders,
+            body
+        )
+        if (res.status !== 200) {
+            throw `Invalid Status Code ${res.status}`
+        }
+        return JSON.parse(res.body)
+    }
+
+    // 列表卡片/覆盖层用的短提示（对齐站点卡片：更新至 x / y 集、全 x 集等）
+    nextRemark(a) {
+        if (a.is_finished && a.total_episodes) {
+            return `全 ${a.total_episodes} 集`
+        }
+        if (a.current_episodes && a.total_episodes) {
+            return `更新至 ${a.current_episodes} / ${a.total_episodes} 集`
+        }
+        if (a.current_episodes) {
+            return `更新至 ${a.current_episodes} 集`
+        }
+        let parts = []
+        if (a.anime_type && a.anime_type.name) {
+            parts.push(a.anime_type.name)
+        }
+        if (a.release_year) {
+            parts.push(String(a.release_year))
+        }
+        return parts.join(' · ')
+    }
+
+    parseNextAnime(a) {
+        return new Anime({
+            id: String(a.id),
+            title: a.title,
+            subtitle: a.title_original ?? '',
+            cover: a.cover_url,
+            tags: a.meta_tags ?? [],
+            description: this.nextRemark(a),
+            stars: a.bangumi_score ?? null,
+        })
+    }
+
+    nextMaxPage(list, pageSize) {
+        let total = list.length > 0 ? (list[0].total_count ?? 0) : 0
+        return Math.max(1, Math.ceil(total / pageSize))
+    }
+
+    // 空关键词 + 排序即可当作榜单/最新列表使用
+    // filterTypeId: 1=连载新番 2=完结旧番 3=剧场版 4=美漫（新接口分类参数）
+    async nextList(sortBy, sortOrder, page, filterTypeId) {
+        let pageSize = 24
+        let body = {
+            search_term: '',
+            page_number: page,
+            items_per_page: pageSize,
+            sort_by: sortBy,
+            sort_order: sortOrder ?? 'desc',
+        }
+        if (filterTypeId) {
+            body.filter_type_id = filterTypeId
+        }
+        let list = await this.nextQuery('search_animes', body)
+        return {
+            animes: list.map((a) => this.parseNextAnime(a)),
+            maxPage: this.nextMaxPage(list, pageSize),
+        }
+    }
+
+    async nextSearch(keyword, page) {
+        let pageSize = 24
+        let list = await this.nextQuery('search_animes', {
+            search_term: keyword,
+            page_number: page,
+            items_per_page: pageSize,
+            sort_by: 'created_at',
+            sort_order: 'desc',
+        })
+        return {
+            animes: list.map((a) => this.parseNextAnime(a)),
+            maxPage: this.nextMaxPage(list, pageSize),
+        }
+    }
+
+    async nextLoadInfo(id) {
+        let json = await this.nextQuery('get_anime_detail', { p_id: Number(id) })
+        let anime = json.anime ?? {}
+
+        // episode 的 key 编码为「线路id|剧集id」，loadEp 时再拆开请求播放地址
+        let episode = {}
+        for (let source of (json.sources ?? [])) {
+            let list = new Map()
+            for (let e of (source.episodes ?? [])) {
+                let title = e.title || (e.kind === 'movie' ? '正片' : `第${e.episode_number ?? ''}话`)
+                list.set(`${source.id}|${e.id}`, title)
+            }
+            if (list.size > 0) {
+                episode[source.name || `线路${source.id}`] = list
+            }
+        }
+
+        let tags = {
+            '导演': anime.director ? [anime.director] : [],
+            '演员': anime.actors ?? [],
+            '类型': anime.meta_tags ?? [],
+        }
+        if (anime.release_year) {
+            tags['年份'] = [String(anime.release_year)]
+        }
+
+        return new AnimeDetails({
+            id: String(id),
+            title: anime.title,
+            subtitle: anime.title_original ?? anime.season_subtitle ?? '',
+            cover: anime.cover_url,
+            description: anime.description ?? '',
+            tags: tags,
+            episode: episode,
+            recommend: (json.related ?? []).map((a) => this.parseNextAnime(a)),
+            url: `${this.nextBaseUrl}/anime/${id}`,
+        })
+    }
+
+    async nextPlayback(action, episodeId, sourceId) {
+        let body = { action: action, episode_id: episodeId }
+        if (sourceId) {
+            body.source_id = sourceId
+        }
+        let res = await Network.post(
+            `${this.nextApiUrl}/functions/v1/issue-web-playback`,
+            this.nextHeaders,
+            body
+        )
+        if (res.status !== 200) {
+            return null
+        }
+        try {
+            return JSON.parse(res.body)
+        } catch (e) {
+            return null
+        }
+    }
+
+    async nextLoadEp(animeId, epId) {
+        let parts = String(epId).split('|')
+        let sourceId = Number(parts[0])
+        let episodeId = Number(parts[1] ?? parts[0])
+
+        // 优先取 HLS 直链，失败再回退 MP4
+        let json = await this.nextPlayback('hls', episodeId, sourceId)
+        if (!json || !json.ok || !json.url) {
+            json = await this.nextPlayback('fallback', episodeId, sourceId)
+        }
+        if (!json || !json.ok || !json.url) {
+            throw 'Failed to load playback url'
+        }
+        return json.url
     }
 
     get headers() {
@@ -95,21 +283,25 @@ class Xfdm extends AnimeSource{
             )
         }
 
-        let animeList = []
         let animes = json.list.map(a => parseAnimed(a))
-        animeList.push(animes)
         return {
-            data: animeList,
+            animes: animes,
             maxPage: null
         }
     }
 
-    explore = [{
+    explore = [
+        {
         title: "稀饭动漫最新",
 
         type: "mixed",
 
-        load: async () => {
+        load: async (page) => {
+            // 新接口：最近更新
+            if (this.useNext()) {
+                let res = await this.nextList('updated_at', 'desc', page)
+                return { data: [res.animes], maxPage: res.maxPage }
+            }
             let res = await Network.get(`https://dm1.xfdm.pro/map.html`,this.headers)
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
@@ -132,8 +324,14 @@ class Xfdm extends AnimeSource{
             type: "mixed",
 
             load: async (page) => {
+                // 新接口：连载新番（按上映日期，与「最新」tab 区分）
+                if (this.useNext()) {
+                    let res = await this.nextList('release_date', 'desc', page, 1)
+                    return { data: [res.animes], maxPage: res.maxPage }
+                }
                 const { time, key } = this.decrypt();
-                return await this.queryAnimes({ "type": 1, "class": "", "page": page, "time": time, "key": key })
+                let res = await this.queryAnimes({ "type": 1, "class": "", "page": page, "time": time, "key": key })
+                return { data: [res.animes], maxPage: res.maxPage }
             }
         },
         {
@@ -142,8 +340,14 @@ class Xfdm extends AnimeSource{
             type: "mixed",
 
             load: async (page) => {
+                // 新接口：完结旧番（按上映日期）
+                if (this.useNext()) {
+                    let res = await this.nextList('release_date', 'desc', page, 2)
+                    return { data: [res.animes], maxPage: res.maxPage }
+                }
                 const { time, key } = this.decrypt();
-                return await this.queryAnimes({ "type": 2, "class": "", "page": page, "time": time, "key": key })
+                let res = await this.queryAnimes({ "type": 2, "class": "", "page": page, "time": time, "key": key })
+                return { data: [res.animes], maxPage: res.maxPage }
             }
         },
         {
@@ -152,8 +356,14 @@ class Xfdm extends AnimeSource{
             type: "mixed",
 
             load: async (page) => {
+                // 新接口：剧场版（按上映日期）
+                if (this.useNext()) {
+                    let res = await this.nextList('release_date', 'desc', page, 3)
+                    return { data: [res.animes], maxPage: res.maxPage }
+                }
                 const { time, key } = this.decrypt();
-                return await this.queryAnimes({ "type": 3, "class": "", "page": page, "time": time, "key": key })
+                let res = await this.queryAnimes({ "type": 3, "class": "", "page": page, "time": time, "key": key })
+                return { data: [res.animes], maxPage: res.maxPage }
             }
         },
         {
@@ -162,14 +372,23 @@ class Xfdm extends AnimeSource{
             type: "mixed",
 
             load: async (page) => {
+                // 新接口：美漫（按上映日期）
+                if (this.useNext()) {
+                    let res = await this.nextList('release_date', 'desc', page, 4)
+                    return { data: [res.animes], maxPage: res.maxPage }
+                }
                 const { time, key } = this.decrypt();
-                return await this.queryAnimes({ "type": 21, "class": "", "page": page, "time": time, "key": key })
+                let res = await this.queryAnimes({ "type": 21, "class": "", "page": page, "time": time, "key": key })
+                return { data: [res.animes], maxPage: res.maxPage }
             }
         },
     ]
 
     search = {
         load:async (keyword,searchOption,page) => {
+            if (this.useNext()) {
+                return await this.nextSearch(keyword, page)
+            }
             let url = `https://dm1.xfdm.pro/search/wd/${keyword}/page/${page}.html`
             let res = await Network.get(url, this.headers,)
             if(res.status !== 200) {
@@ -203,6 +422,9 @@ class Xfdm extends AnimeSource{
 
     anime = {
         loadInfo: async (id) => {
+            if (this.useNext()) {
+                return await this.nextLoadInfo(id)
+            }
             let res = await Network.get(`${this.baseUrl}/bangumi/${id}`,{},)
             if(res.status !== 200) {
                 throw `Invalid Status Code ${res.status}`
@@ -286,6 +508,9 @@ class Xfdm extends AnimeSource{
         },
 
         loadEp: async (animeId, epId) => {
+            if (this.useNext()) {
+                return await this.nextLoadEp(animeId, epId)
+            }
             let res = await Network.get(`${this.baseUrl}${epId}`,{},)
             if (res.status !== 200) {
                 throw "Invalid status code: " + res.status
@@ -299,6 +524,37 @@ class Xfdm extends AnimeSource{
                 action: 'search',
                 keyword: tag,
             }
+        },
+    }
+
+    // 设置：在旧站（dm1.xfdm.pro）与稀饭动漫 Next（next.xifanacg.com）之间切换
+    settings = {
+        apiType: {
+            title: "接口版本",
+            type: "select",
+            options: [
+                { value: "old", text: "稀饭动漫(旧)" },
+                { value: "next", text: "稀饭动漫Next(新)" },
+            ],
+            default: "old",
+        },
+    }
+
+    translation = {
+        'zh_CN': {
+            '接口版本': '接口版本',
+            '稀饭动漫(旧)': '稀饭动漫(旧)',
+            '稀饭动漫Next(新)': '稀饭动漫Next(新)',
+        },
+        'zh_TW': {
+            '接口版本': '介面版本',
+            '稀饭动漫(旧)': '稀飯動漫(舊)',
+            '稀饭动漫Next(新)': '稀飯動漫Next(新)',
+        },
+        'en': {
+            '接口版本': 'API Version',
+            '稀饭动漫(旧)': 'Xifan Anime (Legacy)',
+            '稀饭动漫Next(新)': 'Xifan Anime Next',
         },
     }
 
