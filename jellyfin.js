@@ -1,15 +1,15 @@
 /** @type {import('./_kostori_.js')} */
-class Emby extends AnimeSource {
+class Jellyfin extends AnimeSource {
 
-    name = "emby"
+    name = "jellyfin"
 
-    key = "emby"
+    key = "jellyfin"
 
-    version = "1.1.0"
+    version = "1.0.1"
 
     minAppVersion = "1.0.0"
 
-    url = "https://raw.githubusercontent.com/kostori-app/kostori-configs/master/emby.js"
+    url = "https://raw.githubusercontent.com/kostori-app/kostori-configs/master/jellyfin.js"
 
     host = this.baseUrl
 
@@ -244,7 +244,7 @@ class Emby extends AnimeSource {
 
     explore = [
         {
-            title: "emby",
+            title: "jellyfin",
             type: "multiPartPage",
             load: async () => {
                 let result = []
@@ -300,7 +300,7 @@ class Emby extends AnimeSource {
     ]
 
     category = {
-        title: "Emby",
+        title: "Jellyfin",
         parts: []
     }
 
@@ -492,7 +492,7 @@ class Emby extends AnimeSource {
             }
 
             let eps = {
-                "emby": ep,
+                "jellyfin": ep,
             }
 
             let animes = []
