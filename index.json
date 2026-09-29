@@ -39,13 +39,13 @@
         "name": "iwara",
         "fileName": "iwara.js",
         "key": "iwara",
-        "version": "1.0.9"
+        "version": "1.0.8"
     },
     {
     "name": "7sefun",
     "fileName": "7sefun.js",
     "key": "sefun7",
-    "version": "1.1.1"
+    "version": "1.1.0"
     },
     {
     "name": "dmbus",
