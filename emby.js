@@ -5,7 +5,7 @@ class Emby extends AnimeSource {
 
     key = "emby"
 
-    version = "1.1.1"
+    version = "1.1.2"
 
     minAppVersion = "1.0.0"
 
@@ -73,14 +73,22 @@ class Emby extends AnimeSource {
     }
 
     toAnime(item) {
-        return new Anime({
+        let data = {
             id: item.Id,
             title: item.Name || '',
             subtitle: this.progressText(item),
             cover: this.coverOf(item),
             tags: [],
             description: '',
-        });
+        };
+        // 人物：点击进入二级分类页（列出其参演作品），而不是直接进详情页
+        if (item.Type === 'Person') {
+            data.viewMore = {
+                page: 'category',
+                attributes: { category: item.Name || '', param: `person|${item.Id}` },
+            };
+        }
+        return new Anime(data);
     }
 
     maxPageOf(json, pageSize) {
@@ -317,6 +325,21 @@ class Emby extends AnimeSource {
             if (param && param.indexOf('fav|') === 0) {
                 let type = param.substring(4);
                 return await this.fetchUserItems(this.favoriteQuery(type, startIndex, 100), 100);
+            }
+
+            // 人物作品：param 形如 person|<personId>，进入二级页后列出该人物参演作品
+            if (param && param.indexOf('person|') === 0) {
+                let personId = param.substring(7);
+                let sortBy = (options && options[0]) ? options[0] : 'DateLastContentAdded';
+                let sortOrder = (options && options[1]) ? options[1] : 'Descending';
+                let json = await this.apiGet(
+                    `/Items?PersonIds=${personId}&IncludeItemTypes=Movie,Series&Recursive=true` +
+                    `&SortBy=${sortBy}&SortOrder=${sortOrder}&Limit=100&StartIndex=${startIndex}&UserId=${this.userId}`
+                );
+                return {
+                    animes: (json.Items || []).map(a => this.toAnime(a)),
+                    maxPage: this.maxPageOf(json, 100),
+                }
             }
 
             // 媒体库浏览
