@@ -5,7 +5,7 @@ class Jellyfin extends AnimeSource {
 
     key = "jellyfin"
 
-    version = "1.0.1"
+    version = "1.0.2"
 
     minAppVersion = "1.0.0"
 
@@ -118,7 +118,7 @@ class Jellyfin extends AnimeSource {
     }
 
     favoriteQuery(type, startIndex, limit) {
-        return `Filters=IsFavorite=true&IncludeItemTypes=${type}` +
+        return `Filters=IsFavorite&IncludeItemTypes=${type}` +
             `&SortBy=DateLastContentAdded&SortOrder=Descending&StartIndex=${startIndex}` +
             `&Limit=${limit}&Recursive=true&UserId=${this.userId}`;
     }

@@ -5,7 +5,7 @@ class Emby extends AnimeSource {
 
     key = "emby"
 
-    version = "1.1.0"
+    version = "1.1.1"
 
     minAppVersion = "1.0.0"
 
@@ -118,7 +118,7 @@ class Emby extends AnimeSource {
     }
 
     favoriteQuery(type, startIndex, limit) {
-        return `Filters=IsFavorite=true&IncludeItemTypes=${type}` +
+        return `Filters=IsFavorite&IncludeItemTypes=${type}` +
             `&SortBy=DateLastContentAdded&SortOrder=Descending&StartIndex=${startIndex}` +
             `&Limit=${limit}&Recursive=true&UserId=${this.userId}`;
     }
