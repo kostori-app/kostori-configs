@@ -5,7 +5,7 @@ class Emby extends AnimeSource {
 
     key = "emby"
 
-    version = "1.1.2"
+    version = "1.1.3"
 
     minAppVersion = "1.0.0"
 
@@ -86,6 +86,18 @@ class Emby extends AnimeSource {
             data.viewMore = {
                 page: 'category',
                 attributes: { category: item.Name || '', param: `person|${item.Id}` },
+            };
+        } else if (item.Type === 'BoxSet') {
+            // 合集：点击进入二级分类页列出合集内容，而不是把内容当作剧集展示
+            data.viewMore = {
+                page: 'category',
+                attributes: { category: item.Name || '', param: `boxset|${item.Id}` },
+            };
+        } else if (item.Type === 'Playlist') {
+            // 播放列表：点击进入二级分类页列出列表内容
+            data.viewMore = {
+                page: 'category',
+                attributes: { category: item.Name || '', param: `playlist|${item.Id}` },
             };
         }
         return new Anime(data);
@@ -335,6 +347,32 @@ class Emby extends AnimeSource {
                 let json = await this.apiGet(
                     `/Items?PersonIds=${personId}&IncludeItemTypes=Movie,Series&Recursive=true` +
                     `&SortBy=${sortBy}&SortOrder=${sortOrder}&Limit=100&StartIndex=${startIndex}&UserId=${this.userId}`
+                );
+                return {
+                    animes: (json.Items || []).map(a => this.toAnime(a)),
+                    maxPage: this.maxPageOf(json, 100),
+                }
+            }
+
+            // 合集内容：param 形如 boxset|<id>，进入二级页后列出合集内的条目
+            if (param && param.indexOf('boxset|') === 0) {
+                let boxsetId = param.substring(7);
+                let json = await this.apiGet(
+                    `/Items?ParentId=${boxsetId}&IncludeItemTypes=Movie,Series,Episode,Video&Recursive=true` +
+                    `&SortBy=DateLastContentAdded&SortOrder=Descending&Limit=100&StartIndex=${startIndex}&UserId=${this.userId}`
+                );
+                return {
+                    animes: (json.Items || []).map(a => this.toAnime(a)),
+                    maxPage: this.maxPageOf(json, 100),
+                }
+            }
+
+            // 播放列表内容：param 形如 playlist|<id>
+            if (param && param.indexOf('playlist|') === 0) {
+                let playlistId = param.substring(9);
+                let json = await this.apiGet(
+                    `/Playlists/${playlistId}/Items?StartIndex=${startIndex}&Limit=100` +
+                    `&SortBy=DateLastContentAdded&SortOrder=Descending&UserId=${this.userId}`
                 );
                 return {
                     animes: (json.Items || []).map(a => this.toAnime(a)),
