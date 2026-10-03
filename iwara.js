@@ -5,7 +5,7 @@ class Iwara extends AnimeSource {
 
     key = "iwara"
 
-    version = "1.3.0"
+    version = "1.3.1"
 
     minAppVersion = "1.3.0"
 
@@ -222,21 +222,25 @@ class Iwara extends AnimeSource {
 
     /**
      * 用户入口卡片：点开进入「该 UP 主的全部视频」二级页（viewMore 跳转）
+     * @param user iwara 的 User 对象
+     * @param category 二级页标题（页面标题），不传则用「<昵称> 的全部视频」
      */
-    parseUserEntry(user, title) {
+    parseUserEntry(user, category) {
         let name = user?.name ?? ''
-        let category = title ?? `${name} 的全部视频`
+        // 卡片标题只用昵称：搜索结果 / 点赞列表里要靠昵称区分用户，
+        // 「XX 的全部视频」只作为落地页标题，保证跳过去后知道在看谁
+        let pageTitle = category ?? (name ? `${name} 的全部视频` : '全部视频')
         return new Anime({
             id: `iwara-user-${user?.id ?? name}`,
-            title: category,
-            subtitle: user?.username ? `@${user.username}` : (name ?? ''),
+            title: name || pageTitle,
+            subtitle: user?.username ? `@${user.username}` : '',
             cover: this.userAvatar(user),
             tags: [],
-            description: [{ text: '查看该用户的全部视频' }],
+            description: [{ text: '查看全部视频' }],
             viewMore: {
                 page: 'category',
                 attributes: {
-                    category: category,
+                    category: pageTitle,
                     param: `user|${user?.id ?? ''}`,
                     url: `${this.iwaraBaseUrl}/profile/${encodeURIComponent(name)}`,
                 },
