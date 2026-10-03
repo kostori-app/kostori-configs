@@ -7,7 +7,7 @@ class Iwara extends AnimeSource {
 
     version = "1.3.0"
 
-    minAppVersion = "2.0.0"
+    minAppVersion = "1.3.0"
 
     url = "https://raw.githubusercontent.com/kostori-app/kostori-configs/master/iwara.js"
 
