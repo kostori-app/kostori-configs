@@ -5,7 +5,7 @@ class Iwara extends AnimeSource {
 
     key = "iwara"
 
-    version = "1.3.1"
+    version = "1.3.2"
 
     minAppVersion = "1.3.0"
 
@@ -828,6 +828,14 @@ class Iwara extends AnimeSource {
                 likesCount: Number(json.numLikes) || 0,
                 commentsCount: Number(json.numComments) || 0,
                 isLiked: json.liked === true,
+                uploaderViewMore: user?.id ? {
+                    page: 'category',
+                    attributes: {
+                        category: `${user.name ?? '用户'} 的全部视频`,
+                        param: `user|${user.id}`,
+                        url: `${this.iwaraBaseUrl}/profile/${encodeURIComponent(user.name ?? '')}`,
+                    },
+                } : null,
                 url: `${this.iwaraBaseUrl}/video/${id}`,
             }
         },
